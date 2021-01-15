@@ -1,0 +1,15 @@
+<Project Sdk="Godot.NET.Sdk/3.2.3">
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="Fig\**" />
+    <Compile Remove="wolfread\**" />
+    <EmbeddedResource Remove="Fig\**" />
+    <EmbeddedResource Remove="wolfread\**" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="Fig\Fig.csproj" />
+    <ProjectReference Include="wolfread\wolfread.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,6 @@
+[submodule "Fig"]
+	path = Fig
+	url = https://github.com/JamesK89/Fig.git
+[submodule "wolfread"]
+	path = wolfread
+	url = https://github.com/JamesK89/wolfread
