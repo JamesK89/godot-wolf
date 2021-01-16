@@ -5,6 +5,11 @@ namespace Wolf
 {
 	public class PropBlock : PropBase
 	{
+		private PropBlock()
+			: base(0, 0, null)
+		{
+		}
+
 		public PropBlock(int x, int y, Level level)
 			: base(x, y, level)
 		{
@@ -14,6 +19,7 @@ namespace Wolf
 			shape.Shape = box;
 
 			Body = new StaticBody();
+			Body.CollisionLayer = (uint)Level.CollisionLayers.Static;
 			Body.AddChild(shape);
 
 			AddChild(Body);

@@ -21,6 +21,15 @@ namespace Wolf
         public static Vector3 West = new Vector3(1, 0, 0);
         public static Vector3 East = new Vector3(-1, 0, 0);
 
+        public enum CollisionLayers : uint
+        {
+            None = 20,
+            Walls = 1,
+            Doors = 2,
+            Static = 3,
+            Characters = 4
+        }
+
         public enum CellVertexIndex : int
         {
             Top_NW = 0,
@@ -100,6 +109,18 @@ namespace Wolf
             private set;
         }
 
+        public StaticBody FloorBody
+        {
+            get;
+            private set;
+        }
+
+        public StaticBody CeilingBody
+        {
+            get;
+            private set;
+        }
+
         public Cell[,] Cells
         {
             get;
@@ -129,14 +150,18 @@ namespace Wolf
                     Cell cube = Cell.Default();
 
                     int mapValue = map.Planes[0].Data[x, y];
+                    int mapValue_pl1 = map.Planes[1].Data[x, y];
 
-                    if (mapValue >= MapWallBegin && mapValue <= MapWallEnd)
+                    if (mapValue >= MapWallBegin && mapValue <= MapWallEnd 
+                        && mapValue_pl1 != DoorSecret.DoorSecretId)
                     {
                         if ((x + 1) < map.Width)
                         {
                             int neighbor = map.Planes[0].Data[x + 1, y];
+                            int neighbor_pl1 = map.Planes[1].Data[x + 1, y];
 
-                            if (neighbor < MapWallBegin || neighbor > MapWallEnd)
+                            if (neighbor < MapWallBegin || neighbor > MapWallEnd || 
+                                neighbor_pl1 == DoorSecret.DoorSecretId)
                             {
                                 cube.East = (mapValue - 1) << 1;
                             }
@@ -145,8 +170,10 @@ namespace Wolf
                         if ((x - 1) > -1)
                         {
                             int neighbor = map.Planes[0].Data[x - 1, y];
+                            int neighbor_pl1 = map.Planes[1].Data[x - 1, y];
 
-                            if (neighbor < MapWallBegin || neighbor > MapWallEnd)
+                            if (neighbor < MapWallBegin || neighbor > MapWallEnd || 
+                                neighbor_pl1 == DoorSecret.DoorSecretId)
                             {
                                 cube.West = (mapValue - 1) << 1;
                             }
@@ -155,8 +182,10 @@ namespace Wolf
                         if ((y + 1) < map.Height)
                         {
                             int neighbor = map.Planes[0].Data[x, y + 1];
+                            int neighbor_pl1 = map.Planes[1].Data[x, y + 1];
 
-                            if (neighbor < MapWallBegin || neighbor > MapWallEnd)
+                            if (neighbor < MapWallBegin || neighbor > MapWallEnd || 
+                                neighbor_pl1 == DoorSecret.DoorSecretId)
                             {
                                 cube.South = ((mapValue - 1) << 1) + 1;
                             }
@@ -165,8 +194,10 @@ namespace Wolf
                         if ((y - 1) > -1)
                         {
                             int neighbor = map.Planes[0].Data[x, y - 1];
+                            int neighbor_pl1 = map.Planes[1].Data[x, y - 1];
 
-                            if (neighbor < MapWallBegin || neighbor > MapWallEnd)
+                            if (neighbor < MapWallBegin || neighbor > MapWallEnd || 
+                                neighbor_pl1 == DoorSecret.DoorSecretId)
                             {
                                 cube.North = ((mapValue - 1) << 1) + 1;
                             }
@@ -190,15 +221,17 @@ namespace Wolf
             {
                 for (int x = 0; x < Map.Width; x++)
                 {
-                    int pl0_id = Map.Planes[0].Data[x, y];
-                    int pl1_id = Map.Planes[1].Data[x, y];
+                    if (DoorFactory.CreateSlidingDoor(x, y, this) != null)
+                        continue;
 
-                    if (Door.IsDoorCell(pl0_id))
-                    {
-                        Door d = new Door(x, y, this);
-                    }
+                    if (DoorFactory.CreateSecretDoor(x, y, this) != null)
+                        continue;
 
-                    PropFactory.CreateProp(x, y, this);
+                    if (PropFactory.CreateProp(x, y, this) != null)
+                        continue;
+
+                    if (CharacterFactory.CreateCharacter(x, y, this) != null)
+                        continue;
                 }
             }
         }
@@ -207,9 +240,10 @@ namespace Wolf
         {
             foreach (Node child in GetChildren())
             {
-                if (child is Door || 
+                if (child is DoorSliding || 
                     child is PropBase || 
-                    child is StaticBody)
+                    child is StaticBody ||
+                    child is CharacterBase)
                 {
                     RemoveChild(child);
                     child.QueueFree();
@@ -218,6 +252,38 @@ namespace Wolf
 
             LoadMap(index);
             BuildMeshFromCells();
+            
+            Vector3 plPos = new Vector3(
+                CellSize * (float)Map.Width * -0.5f,
+                CellSize * -0.5f,
+                CellSize * (float)Map.Height * -0.5f);
+
+            FloorBody = CreateCollisionPlane(plPos, Vector3.Up, 0f);
+            AddChild(FloorBody);
+
+            plPos.y *= -1f;
+
+            CeilingBody = CreateCollisionPlane(plPos, Vector3.Down, 0f);
+            AddChild(CeilingBody);
+        }
+
+        private StaticBody CreateCollisionPlane(Vector3 position, Vector3 normal, float d)
+        {
+            StaticBody body = new StaticBody();
+            CollisionShape colShape = new CollisionShape();
+            PlaneShape plaShape = new PlaneShape();
+            
+            plaShape.Plane = new Plane(normal, d);
+            colShape.Shape = plaShape;
+
+            Transform tform = Transform.Identity;
+            tform.origin = position;
+
+            body.Transform = tform;
+
+            body.AddChild(colShape);
+
+            return body;
         }
 
         public void BuildMeshFromCells()

@@ -25,6 +25,7 @@ namespace Wolf
             {PropType.Junk2, typeof(PropStatic)},
             {PropType.Junk3, typeof(PropStatic)},
             {PropType.Gibs, typeof(PropStatic)},
+            {PropType.Blood, typeof(PropStatic)},
 
             /* Pickup Props */
             {PropType.DogFood, typeof(PropPickup)},
@@ -59,7 +60,6 @@ namespace Wolf
             {PropType.WoodBarrel, typeof(PropBlock)},
             {PropType.Well, typeof(PropBlock)},
             {PropType.EmptyWell, typeof(PropBlock)},
-            {PropType.Blood, typeof(PropBlock)},
             {PropType.Flag, typeof(PropBlock)},
             {PropType.Stove, typeof(PropBlock)},
             {PropType.Spears, typeof(PropBlock)},

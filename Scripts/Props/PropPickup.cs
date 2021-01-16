@@ -5,6 +5,11 @@ namespace Wolf
 {
 	public class PropPickup : PropBase
 	{
+		private PropPickup()
+			: base(0, 0, null)
+		{
+		}
+
 		public PropPickup(int x, int y, Level level)
 			: base(x, y, level)
 		{

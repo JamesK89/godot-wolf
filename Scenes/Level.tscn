@@ -1,78 +1,29 @@
-[gd_scene load_steps=3 format=2]
+[gd_scene load_steps=4 format=2]
 
 [ext_resource path="res://Scripts/Level.cs" type="Script" id=1]
 
-[sub_resource type="GDScript" id=1]
-script/source = "extends Camera
+[sub_resource type="ProceduralSky" id=1]
+sky_top_color = Color( 0.243137, 0.262745, 0.27451, 1 )
+sky_curve = 1.44351e-07
+ground_bottom_color = Color( 0.482353, 0.482353, 0.482353, 1 )
+ground_curve = 2.40456e-05
+sun_latitude = 90.0
+sun_angle_min = 0.0
+sun_angle_max = 0.0
+sun_curve = 0.00122591
 
-# tested in Godot 3.1
-export var normal_flyspeed = 5
-export var shift_flyspeed = 15
-var flyspeed = normal_flyspeed
-var tmp_flyspeed
-var view_sensitivity = 0.3
-var mousedifference = Vector3()
-var yaw = 0
-var pitch = 0
-var moving = false
-var idx = 0
-
-func _ready():
-	self.set_process_input(true)
-	self.set_process(true)
-
-func _input(event):
-	if moving && event is InputEventMouseMotion:
-		yaw = fmod(yaw - event.relative.x * view_sensitivity , 360)
-		pitch = max(min(pitch - event.relative.y * view_sensitivity, 90), -90)
-		self.set_rotation(Vector3(deg2rad(pitch), deg2rad(yaw), 0))
-
-func _process(delta):
-	if Input.is_action_just_pressed(\"ui_right\"):
-		idx += 1
-		get_parent().Load(idx)
-	elif Input.is_action_just_pressed(\"ui_left\"):
-		idx -= 1
-		get_parent().Load(idx)
-
-	if Input.is_action_just_pressed(\"ui_accept\"):
-		moving = !moving
-		if moving:
-			Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
-		else:
-			Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
-	
-	if moving:
-		# Fly faster if shift is pressed:
-		if(Input.is_key_pressed(KEY_SHIFT)):
-			flyspeed = shift_flyspeed
-		else:
-			flyspeed = normal_flyspeed
-		
-		# WASD = move on horizontal plane
-		if(Input.is_key_pressed(KEY_W)):
-			self.set_translation(self.get_translation() - get_global_transform().basis*Vector3(0,0,1) * flyspeed * .01)
-		if(Input.is_key_pressed(KEY_S)):
-			self.set_translation(self.get_translation() - get_global_transform().basis*Vector3(0,0,1) * flyspeed * -.01)
-		if(Input.is_key_pressed(KEY_A)):
-			self.set_translation(self.get_translation() - get_global_transform().basis*Vector3(1,0,0) * flyspeed * .01)
-		if(Input.is_key_pressed(KEY_D)):
-			self.set_translation(self.get_translation() - get_global_transform().basis*Vector3(1,0,0) * flyspeed * -.01)
-		# E/R move upward, Q/F move downwards
-		if(Input.is_key_pressed(KEY_E) or Input.is_key_pressed(KEY_R)):
-			self.set_translation(self.get_translation() - get_global_transform().basis*Vector3(0,1,0) * flyspeed * -.01)
-		if(Input.is_key_pressed(KEY_Q) or Input.is_key_pressed(KEY_F)):
-			self.set_translation(self.get_translation() - get_global_transform().basis*Vector3(0,1,0) * flyspeed * .01)
-"
+[sub_resource type="Environment" id=2]
+background_mode = 2
+background_sky = SubResource( 1 )
+background_color = Color( 0.419608, 0.203922, 0.203922, 1 )
+ambient_light_color = Color( 1, 1, 1, 1 )
+ambient_light_energy = 16.0
 
 [node name="Level" type="MeshInstance"]
 script = ExtResource( 1 )
 
 [node name="CSGBox" type="CSGBox" parent="."]
+visible = false
 
-[node name="Camera" type="Camera" parent="."]
-transform = Transform( -1, 2.02266e-07, -2.55463e-07, -2.17654e-08, 0.740793, 0.671733, 3.25114e-07, 0.671733, -0.740793, 32.2106, 22.4095, -3.47809 )
-current = true
-fov = 90.0
-far = 1024.0
-script = SubResource( 1 )
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource( 2 )

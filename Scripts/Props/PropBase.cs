@@ -112,28 +112,35 @@ namespace Wolf
             {PropType.Vines, 49}
         };
 
+        private PropBase()
+        {
+        }
+
 		protected PropBase(int x, int y, Level level)
 		{
-            Level = level;
-            Type = (PropType)Level.Map.Planes[1].Data[x, y];
-            Location = (x, y);
+            if (level != null)
+            {
+                Level = level;
+                Type = (PropType)Level.Map.Planes[1].Data[x, y];
+                Location = (x, y);
 
-            Billboard = SpatialMaterial.BillboardMode.FixedY;
-			Texture = (Assets.GetSprite(PropSpriteIndices[Type]) as SpatialMaterial).AlbedoTexture;
-			PixelSize = Level.CellSize / (float)Assets.VSWAP.SpriteSize.Height;
+                Billboard = SpatialMaterial.BillboardMode.FixedY;
+                Texture = (Assets.GetSprite(PropSpriteIndices[Type]) as SpatialMaterial).AlbedoTexture;
+                PixelSize = Level.CellSize / (float)Assets.VSWAP.SpriteSize.Height;
 
-			Vector3 origin = new Vector3(
-				(((float)level.Map.Width * Level.CellSize) - ((float)x * Level.CellSize)) + (Level.CellSize * 0.5f),
-				0,
-				((float)y * Level.CellSize) + (Level.CellSize * 0.5f));
+                Vector3 origin = new Vector3(
+                    (((float)level.Map.Width * Level.CellSize) - ((float)x * Level.CellSize)) + (Level.CellSize * 0.5f),
+                    0,
+                    ((float)y * Level.CellSize) + (Level.CellSize * 0.5f));
 
-		    Level.AddChild(this);
+                Level.AddChild(this);
 
-			Transform tform = this.Transform;
+                Transform tform = this.Transform;
 
-			tform.origin = origin;
+                tform.origin = origin;
 
-			this.Transform = tform;
+                this.Transform = tform;
+            }
 		}
 
         public Level Level
