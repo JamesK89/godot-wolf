@@ -47,7 +47,10 @@ namespace Wolf
             UseRay.Enabled = true;
             UseRay.ExcludeParent = true;
             UseRay.CastTo = Vector3.Forward * (Level.CellSize * 0.5f);
-            UseRay.CollisionMask = uint.MaxValue;
+            UseRay.CollisionMask = (uint)(
+                Level.CollisionLayers.Characters | 
+                Level.CollisionLayers.Static | 
+                Level.CollisionLayers.Walls);
             UseRay.AddException(this);
 
             Camera.AddChild(UseRay);

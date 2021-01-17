@@ -23,11 +23,11 @@ namespace Wolf
 
         public enum CollisionLayers : uint
         {
-            None = 20,
+            None = 0,
             Walls = 1,
             Doors = 2,
-            Static = 3,
-            Characters = 4
+            Static = 4,
+            Characters = 8
         }
 
         public enum CellVertexIndex : int
@@ -91,6 +91,12 @@ namespace Wolf
         {
         }
 
+        public int Index
+        {
+            get;
+            private set;
+        }
+
         public int Width
         {
             get;
@@ -131,13 +137,34 @@ namespace Wolf
         public override void _Ready()
         {
             Load(0);
+            SetProcess(true);
         }
+        
+        public override void _Process(float delta)
+        {
+            int indexChange = 0;
 
-        //  // Called every frame. 'delta' is the elapsed time since the previous frame.
-        //  public override void _Process(float delta)
-        //  {
-        //      
-        //  }
+            if (Input.IsActionJustPressed("prev_map"))
+            {
+                indexChange = -1;
+            }
+            else if (Input.IsActionJustPressed("next_map"))
+            {
+                indexChange = 1;
+            }
+
+            if (indexChange != 0)
+            {
+                indexChange += Index;
+
+                if (indexChange != Index && 
+                    indexChange >= 0 && 
+                    indexChange < Configuration.Assets.NUMMAPS)
+                {
+                    Load(indexChange);
+                }
+            }
+        }
 
         private Cell[,] BuildCellsFromMap(wolfread.Map map)
         {
@@ -238,6 +265,8 @@ namespace Wolf
 
         public void Load(int index)
         {
+            Index = index;
+
             foreach (Node child in GetChildren())
             {
                 if (child is DoorSliding || 

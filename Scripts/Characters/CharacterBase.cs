@@ -38,6 +38,11 @@ namespace Wolf
             AddChild(colShape);
 
             CollisionLayer = (uint)Level.CollisionLayers.Characters;
+            CollisionMask = (uint)(
+                Level.CollisionLayers.Characters |
+                Level.CollisionLayers.Static |
+                Level.CollisionLayers.Doors |
+                Level.CollisionLayers.Walls);
             
             Vector3 origin = new Vector3(
                 (((float)level.Map.Width * Level.CellSize) - ((float)x * Level.CellSize)) + (Level.CellSize * 0.5f),
