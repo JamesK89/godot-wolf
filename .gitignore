@@ -10,6 +10,7 @@ Data/*.SOD
 # Godot
 .import/
 .mono/
+*.import
 
 # User-specific files
 *.rsuser
