@@ -54,6 +54,7 @@ namespace Wolf
         private Tween _tween;
 
         private float _openTimer;
+        private bool _canClose;
 
         private DoorSliding()
         {
@@ -104,12 +105,12 @@ namespace Wolf
             shape.Shape = box;
             shape.Name = "CollisionShape";
 
-            Body = new StaticBody();
-            Body.CollisionLayer = (uint)Level.CollisionLayers.Static;
-            Body.CollisionMask = (uint)(Level.CollisionLayers.Characters);
-            Body.AddChild(shape);
+            CellBody = new StaticBody();
+            CellBody.CollisionLayer = (uint)Level.CollisionLayers.Static;
+            CellBody.CollisionMask = (uint)(Level.CollisionLayers.Characters);
+            CellBody.AddChild(shape);
 
-            AddChild(Body);
+            AddChild(CellBody);
 
             BuildDoorMesh();
 
@@ -121,6 +122,21 @@ namespace Wolf
             {
                 Mesh.Transform = Transform.Identity.Rotated(Vector3.Up, Mathf.Pi * 0.5f);
             }
+
+            shape = new CollisionShape();
+            box = new BoxShape();
+            box.Extents = new Vector3(Level.CellSize * 0.5f, Level.CellSize * 0.5f, Mathf.Epsilon);
+
+            shape.Shape = box;
+            shape.Name = "CollisionShape";
+
+            DoorBody = new RigidBody();
+            DoorBody.CollisionLayer = (uint)Level.CollisionLayers.Doors;
+            DoorBody.CollisionMask = (uint)Level.CollisionLayers.Projectiles;
+            DoorBody.AddChild(shape);
+            DoorBody.Mode = RigidBody.ModeEnum.Static;
+
+            Mesh.AddChild(DoorBody);
 
             AddChild(Mesh);
 
@@ -145,7 +161,10 @@ namespace Wolf
 
             Mesh.AddChild(_tween);
 
+            _canClose = true;
+
             SetProcess(true);
+            SetPhysicsProcess(true);
         }
 
         public override void _Ready()
@@ -176,7 +195,7 @@ namespace Wolf
 
         private void OnTweenCompleted()
         {
-            CollisionShape shape = Body.GetNode<CollisionShape>("CollisionShape");
+            CollisionShape shape = CellBody.GetNode<CollisionShape>("CollisionShape");
 
             switch (State)
             {
@@ -222,7 +241,7 @@ namespace Wolf
         {
             bool success = false;
 
-            if (State == DoorState.Opened)
+            if (State == DoorState.Opened && _canClose)
             {
                 State = DoorState.Closing;
 
@@ -235,6 +254,14 @@ namespace Wolf
             }
 
             return success;
+        }
+
+        public bool CanClose
+        {
+            get
+            {
+                return _canClose;
+            }
         }
 
         public bool IsOpened
@@ -281,7 +308,13 @@ namespace Wolf
             protected set;
         }
 
-        public StaticBody Body
+        public StaticBody CellBody
+        {
+            get;
+            protected set;
+        }
+
+        public RigidBody DoorBody
         {
             get;
             protected set;
@@ -311,13 +344,36 @@ namespace Wolf
             {
                 _openTimer -= delta;
 
-                if (_openTimer < 0.0f)
+                if (_openTimer < 0.0f && _canClose)
                 {
                     Close();
                 }
             }
 
 			base._Process(delta);
+		}
+
+		public override void _PhysicsProcess(float delta)
+        {
+            if (State == DoorState.Opened)
+            {
+                var space =  CellBody.GetWorld().DirectSpaceState;
+                var query = new PhysicsShapeQueryParameters();
+
+                CollisionShape colNode = CellBody.GetNode<CollisionShape>("CollisionShape");
+
+                query.SetShape(colNode.Shape);
+                query.CollisionMask = (int)Level.CollisionLayers.Characters;
+                query.CollideWithBodies = true;
+                query.CollideWithAreas = false;
+                query.Transform = colNode.GlobalTransform;
+
+                var results = space.IntersectShape(query);
+                
+                _canClose = (results == null || results.Count < 1);
+            }
+
+            base._PhysicsProcess(delta);
 		}
 
 		private static void BuildDoorMesh()

@@ -16,18 +16,27 @@ namespace Wolf
         private const int MapWallBegin = 1;
         private const int MapWallEnd = 63;
 
+
+        public enum Planes : int
+        {
+            Walls = 0,
+            Objects
+        }
+
         public static Vector3 North = new Vector3(0, 0, -1);
         public static Vector3 South = new Vector3(0, 0, 1);
         public static Vector3 West = new Vector3(1, 0, 0);
         public static Vector3 East = new Vector3(-1, 0, 0);
 
+        [Flags]
         public enum CollisionLayers : uint
         {
             None = 0,
             Walls = 1,
             Doors = 2,
             Static = 4,
-            Characters = 8
+            Characters = 8,
+            Projectiles = 16
         }
 
         public enum CellVertexIndex : int
@@ -131,6 +140,14 @@ namespace Wolf
         {
             get;
             private set;
+        }
+
+        public Vector3 MapToWorld(int x, int y)
+        {
+            return new Vector3(
+                    (((float)Map.Width * Level.CellSize) - ((float)x * Level.CellSize)) + (Level.CellSize * 0.5f),
+                    0,
+                    ((float)y * Level.CellSize) + (Level.CellSize * 0.5f));
         }
 
         // Called when the node enters the scene tree for the first time.

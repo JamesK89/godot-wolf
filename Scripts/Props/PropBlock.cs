@@ -20,6 +20,7 @@ namespace Wolf
 
 			Body = new StaticBody();
 			Body.CollisionLayer = (uint)Level.CollisionLayers.Static;
+			Body.CollisionMask = (uint)Level.CollisionLayers.Characters;
 			Body.AddChild(shape);
 
 			AddChild(Body);

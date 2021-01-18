@@ -11,7 +11,6 @@ Contributions are welcome!
 Some things that are needed in no particular order:
 * There is not yet audio nor any support for loading audio in the wolfread library.
 * Secret doors (aka Push blocks) are not implemented yet.
-* Regular doors do not check if there is something inside their "cell" before automatically closing.
 * Pickups are non-functional at the moment.
 * There is no heads up display.
 * No AI characters are implemented yet.

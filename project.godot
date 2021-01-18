@@ -73,6 +73,7 @@ prev_map={
 3d_physics/layer_2="Doors"
 3d_physics/layer_3="Static"
 3d_physics/layer_4="Characters"
+3d_physics/layer_5="Projectiles"
 
 [rendering]
 

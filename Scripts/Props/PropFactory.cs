@@ -70,7 +70,7 @@ namespace Wolf
         {
             PropBase ret = null;
 
-            PropType type = (PropType)level.Map.Planes[1].Data[x, y];
+            PropType type = (PropType)level.Map.Planes[(int)Level.Planes.Objects].Data[x, y];
 
             if (_propTypeMap.ContainsKey(type))
             {

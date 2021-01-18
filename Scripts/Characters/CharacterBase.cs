@@ -19,7 +19,7 @@ namespace Wolf
 
             Location = (x, y);
 
-            Type = (CharacterType)level.Map.Planes[1].Data[x, y];
+            Type = (CharacterType)level.Map.Planes[(int)Level.Planes.Objects].Data[x, y];
 
             SetAxisLock(PhysicsServer.BodyAxis.AngularX, true);
             SetAxisLock(PhysicsServer.BodyAxis.AngularY, true);
@@ -42,18 +42,14 @@ namespace Wolf
                 Level.CollisionLayers.Characters |
                 Level.CollisionLayers.Static |
                 Level.CollisionLayers.Doors |
-                Level.CollisionLayers.Walls);
-            
-            Vector3 origin = new Vector3(
-                (((float)level.Map.Width * Level.CellSize) - ((float)x * Level.CellSize)) + (Level.CellSize * 0.5f),
-                0,
-                ((float)y * Level.CellSize) + (Level.CellSize * 0.5f));
+                Level.CollisionLayers.Walls |
+                Level.CollisionLayers.Projectiles);
 
             Level.AddChild(this);
 
             Transform tform = this.Transform;
 
-            tform.origin = origin;
+            tform.origin = level.MapToWorld(x, y);
 
             this.Transform = tform;
 
