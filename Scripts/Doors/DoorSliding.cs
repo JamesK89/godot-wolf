@@ -154,12 +154,20 @@ namespace Wolf
             this.Transform = tform;
 
             State = DoorState.Closed;
-            Speed = 1f;
+            Speed = 0.75f;
 
             _tween = new Tween();
             _tween.Connect("tween_all_completed", this, "OnTweenCompleted");
 
             Mesh.AddChild(_tween);
+
+            AudioStreamPlayer3D audioPlayer = new AudioStreamPlayer3D();
+            audioPlayer.Name = "AudioPlayer";
+
+            AddChild(audioPlayer);
+
+            OpenSound = Assets.GetSoundClip(3);
+            CloseSound = Assets.GetSoundClip(2);
 
             _canClose = true;
 
@@ -185,6 +193,18 @@ namespace Wolf
                     Type == DoorType.Normal_Vertical ||
                     Type == DoorType.SilverKey_Vertical);
             }
+        }
+
+        public AudioStreamSample OpenSound
+        {
+            get;
+            set;
+        }
+
+        public AudioStreamSample CloseSound
+        {
+            get;
+            set;
         }
 
         public float Speed
@@ -231,6 +251,11 @@ namespace Wolf
                 _tween.ResetAll();
                 _tween.Start();
 
+                AudioStreamPlayer3D audioPlayer = GetNode<AudioStreamPlayer3D>("AudioPlayer");
+                audioPlayer.Stream = OpenSound;
+                audioPlayer.Seek(0.0f);
+                audioPlayer.Play();
+
                 success = true;
             }
 
@@ -249,7 +274,15 @@ namespace Wolf
                 _tween.InterpolateProperty(Mesh, "translation", Mesh.Translation, Vector3.Zero, Speed, Tween.TransitionType.Linear, Tween.EaseType.InOut);
                 _tween.ResetAll();
                 _tween.Start();
-                
+
+                CollisionShape shape = CellBody.GetNode<CollisionShape>("CollisionShape");
+                shape.Disabled = false;
+
+                AudioStreamPlayer3D audioPlayer = GetNode<AudioStreamPlayer3D>("AudioPlayer");
+                audioPlayer.Stream = CloseSound;
+                audioPlayer.Seek(0.0f);
+                audioPlayer.Play();
+
                 success = true;
             }
 

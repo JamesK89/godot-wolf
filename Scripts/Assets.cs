@@ -11,11 +11,19 @@ namespace Wolf
 {
 	public static class Assets
 	{
+		public const int SoundSampleRate = 7042;
+
+		public static Color Transparent =
+			Color.Color8(152, 0, 136);
+		
 		private static Dictionary<int, Material> _vswapTexture =
 			new Dictionary<int, Material>();
 
 		private static Dictionary<int, Material> _vswapSprite =
 			new Dictionary<int, Material>();
+
+		private static Dictionary<int, AudioStreamSample> _vswapSound =
+			new Dictionary<int, AudioStreamSample>();
 
 		public static Material GetTexture(int idx)
 		{
@@ -31,7 +39,7 @@ namespace Wolf
 				ImageTexture tex = new ImageTexture();
 				Image img = new Image();
 
-				System.Drawing.Bitmap bmp = VSWAP.GetTexture(Palette, (uint)idx);
+				System.Drawing.Bitmap bmp = VSWAP.GetTextureBitmap(Palette, (uint)idx);
 
 				int stride = VSWAP.TextureSize.Width * 4;
 
@@ -80,7 +88,7 @@ namespace Wolf
 				ImageTexture tex = new ImageTexture();
 				Image img = new Image();
 
-				System.Drawing.Bitmap bmp = VSWAP.GetSprite(Palette, (uint)idx);
+				System.Drawing.Bitmap bmp = VSWAP.GetSpriteBitmap(Palette, (uint)idx);
 
 				int stride = VSWAP.SpriteSize.Width * 4;
 
@@ -94,7 +102,9 @@ namespace Wolf
 						data[(stride * y) + (x * 4) + 1] = pixel.G;
 						data[(stride * y) + (x * 4) + 2] = pixel.B;
 
-						if (pixel.R == 152 && pixel.G == 0 && pixel.B == 136)
+						if (pixel.R == Transparent.r8 && 
+							pixel.G == Transparent.g8 && 
+							pixel.B == Transparent.b8)
 						{
 							data[(stride * y) + (x * 4) + 3] = 0;
 						}
@@ -122,6 +132,37 @@ namespace Wolf
 			}
 
 			return ret;
+		}
+
+		public static AudioStreamSample GetSoundClip(int idx)
+		{
+			AudioStreamSample result =
+				_vswapSound.ContainsKey(idx) ? _vswapSound[idx] : null;
+
+			if (result == null)
+			{
+				byte[] data = VSWAP.GetSoundData((uint)idx);
+
+				if (data != null && data.Length > 0)
+				{
+					for (int i = 0; i < data.Length; i++)
+					{
+						unchecked
+						{
+							data[i] -= 0x80;
+						}
+					}
+
+					result = new AudioStreamSample();
+
+					result.Format = AudioStreamSample.FormatEnum.Format8Bits;
+					result.MixRate = SoundSampleRate;
+					result.LoopMode = AudioStreamSample.LoopModeEnum.Disabled;
+					result.Data = data;
+				}
+			}
+
+			return result;
 		}
 
 		public static WolfPalette Palette
