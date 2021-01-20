@@ -5,6 +5,9 @@ namespace Wolf
 {
     public class CharacterPlayer : CharacterBase
     {
+        [Signal]
+        public delegate void PickedUp(Node what);
+
         [Flags]
         protected enum InputMoveFlags : uint
         {
@@ -22,49 +25,85 @@ namespace Wolf
             set;
         }
 
+        private float _flashDuration;
+        private CanvasLayer _flashCanvas;
+        private ColorRect _flashRect;
+        private Tween _flashTween;
+
         private RayCast _useRay;
         private Camera _camera;
 
         private float _moveSpeed;
         private float _turnSpeed;
 
+        private CharacterPlayer() :
+            base(0, 0, null)
+        {
+        }
+
         public CharacterPlayer(int x, int y, Level level)
             : base(x, y, level)
         {
-            _camera = new Camera();
-            _camera.Current = true;
-
-            switch (Type)
+            if (level != null)
             {
-                case CharacterType.Player_East:
-                    _camera.Transform = Transform.Identity.Rotated(Vector3.Up, Mathf.Pi * -0.5f);
-                break;
-                case CharacterType.Player_West:
-                    _camera.Transform = Transform.Identity.Rotated(Vector3.Up, Mathf.Pi * 0.5f);
-                break;
-                case CharacterType.Player_South:
-                    _camera.Transform = Transform.Identity.Rotated(Vector3.Up, Mathf.Pi * -1.0f);
-                break;
+                _camera = new Camera();
+                _camera.Current = true;
+
+                switch (Type)
+                {
+                    case CharacterType.Player_East:
+                        _camera.Transform = Transform.Identity.Rotated(Vector3.Up, Mathf.Pi * -0.5f);
+                        break;
+                    case CharacterType.Player_West:
+                        _camera.Transform = Transform.Identity.Rotated(Vector3.Up, Mathf.Pi * 0.5f);
+                        break;
+                    case CharacterType.Player_South:
+                        _camera.Transform = Transform.Identity.Rotated(Vector3.Up, Mathf.Pi * -1.0f);
+                        break;
+                }
+
+                _moveSpeed = Level.CellSize * 200.0f;
+                _turnSpeed = 3f;
+
+                _useRay = new RayCast();
+                _useRay.Enabled = true;
+                _useRay.ExcludeParent = true;
+                _useRay.CastTo = Vector3.Forward * (Level.CellSize * 0.5f);
+                _useRay.CollisionMask = (uint)(
+                    Level.CollisionLayers.Characters |
+                    Level.CollisionLayers.Static |
+                    Level.CollisionLayers.Walls);
+                _useRay.AddException(this);
+
+                _camera.AddChild(_useRay);
+
+                _flashDuration = 0.5f;
+
+                _flashRect = new ColorRect();
+                _flashRect.MouseFilter = Control.MouseFilterEnum.Ignore;
+                _flashRect.Color = new Color(0.75f, 0.75f, 0f, 1f);
+                _flashRect.AnchorTop =
+                    _flashRect.AnchorLeft = 0f;
+                _flashRect.AnchorRight =
+                    _flashRect.AnchorBottom = 1f;
+                _flashRect.SetAsToplevel(true);
+                _flashRect.ShowOnTop = true;
+                _flashRect.Visible = false;
+
+                _flashTween = new Tween();
+                _flashTween.Connect("tween_all_completed", this, "OnFlashTweenCompleted");
+                _flashRect.AddChild(_flashTween);
+
+                _flashCanvas = new CanvasLayer();
+                _flashCanvas.AddChild(_flashRect);
+
+                _camera.AddChild(_flashCanvas);
+
+                AddChild(_camera);
+
+                SetProcess(true);
+                SetPhysicsProcess(true);
             }
-
-            _moveSpeed = Level.CellSize * 200.0f;
-            _turnSpeed = 3f;
-
-            _useRay = new RayCast();
-            _useRay.Enabled = true;
-            _useRay.ExcludeParent = true;
-            _useRay.CastTo = Vector3.Forward * (Level.CellSize * 0.5f);
-            _useRay.CollisionMask = (uint)(
-                Level.CollisionLayers.Characters | 
-                Level.CollisionLayers.Static | 
-                Level.CollisionLayers.Walls);
-            _useRay.AddException(this);
-
-            _camera.AddChild(_useRay);
-            AddChild(_camera);
-            
-            SetProcess(true);
-            SetPhysicsProcess(true);
         }
 
         protected virtual void ProcessMovement(float delta)
@@ -138,10 +177,33 @@ namespace Wolf
             if (what != null &&
                 what is PropPickup)
             {
+                EmitSignal(nameof(PickedUp), new object[] { what });
+                FlashScreen();
                 result = true;
             }
 
             return result;
+        }
+
+        public void FlashScreen()
+        {
+            if (_flashTween.IsActive())
+            {
+                _flashTween.StopAll();
+                _flashTween.ResetAll();
+            }
+
+            _flashRect.Visible = true;
+            
+            _flashTween.InterpolateProperty(_flashRect, "color", new Color(0.75f, 0.75f, 0, 1), new Color(1, 1, 1, 0), _flashDuration);
+            _flashTween.ResetAll();
+            _flashTween.Start();
+        }
+
+        private void OnFlashTweenCompleted()
+        {
+            _flashRect.Visible = false;
+            _flashTween.StopAll();
         }
 
         public override void _Process(float delta)

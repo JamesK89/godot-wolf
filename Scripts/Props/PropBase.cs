@@ -117,6 +117,7 @@ namespace Wolf
         }
 
 		protected PropBase(int x, int y, Level level)
+            : this()
 		{
             if (level != null)
             {

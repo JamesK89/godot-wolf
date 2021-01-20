@@ -35,65 +35,68 @@ namespace Wolf
 
         public DoorSecret(int x, int y, Level level)
         {
-            Location = new Point2(x, y);
-            Level = level;
-            
-            Type = level.Map.Planes[(int)Level.Planes.Walls][y, x];
+            if (level != null)
+            {
+                Location = new Point2(x, y);
+                Level = level;
 
-            // This will be the physical body for the door itself.
+                Type = level.Map.Planes[(int)Level.Planes.Walls][y, x];
 
-            BoxShape box = new BoxShape();
-            box.Extents = new Vector3(Level.CellSize * 0.5f, Level.CellSize * 0.5f, Level.CellSize * 0.5f);
+                // This will be the physical body for the door itself.
 
-            _wallShape = new CollisionShape();
-            _wallShape.Shape = box;
+                BoxShape box = new BoxShape();
+                box.Extents = new Vector3(Level.CellSize * 0.5f, Level.CellSize * 0.5f, Level.CellSize * 0.5f);
 
-            _wallBody = new RigidBody();
-            _wallBody.Mode = RigidBody.ModeEnum.Static;
-            _wallBody.CollisionLayer = (uint)Level.CollisionLayers.Walls;
-            _wallBody.CollisionMask = (uint)(Level.CollisionLayers.Characters | Level.CollisionLayers.Projectiles);
-            _wallBody.AddChild(_wallShape);
+                _wallShape = new CollisionShape();
+                _wallShape.Shape = box;
 
-            AddChild(_wallBody);
+                _wallBody = new RigidBody();
+                _wallBody.Mode = RigidBody.ModeEnum.Static;
+                _wallBody.CollisionLayer = (uint)Level.CollisionLayers.Walls;
+                _wallBody.CollisionMask = (uint)(Level.CollisionLayers.Characters | Level.CollisionLayers.Projectiles);
+                _wallBody.AddChild(_wallShape);
 
-            // Create the actual mesh for the door
+                AddChild(_wallBody);
 
-            _mesh = new MeshInstance();
-            _mesh.Mesh = GetMeshForDoor(Type);
+                // Create the actual mesh for the door
 
-            _wallBody.AddChild(_mesh);
+                _mesh = new MeshInstance();
+                _mesh.Mesh = GetMeshForDoor(Type);
 
-            // Add an audio player to play the "pushing" sound when the door
-            // is activated.
+                _wallBody.AddChild(_mesh);
 
-            _audioPlayer = new AudioStreamPlayer3D();
+                // Add an audio player to play the "pushing" sound when the door
+                // is activated.
 
-            _wallBody.AddChild(_audioPlayer);
+                _audioPlayer = new AudioStreamPlayer3D();
 
-            _activateSound = Assets.GetSoundClip(Assets.DigitalSoundList.PushWallActivation);
-            
-            // Add the tween that will be used to animate the door.
+                _wallBody.AddChild(_audioPlayer);
 
-            _tween = new Tween();
-            _tween.Connect("tween_all_completed", this, "OnTweenCompleted");
+                _activateSound = Assets.GetSoundClip(Assets.DigitalSoundList.PushWallActivation);
 
-            AddChild(_tween);
+                // Add the tween that will be used to animate the door.
 
-            // Add myself to the world and set my position.
+                _tween = new Tween();
+                _tween.Connect("tween_all_completed", this, "OnTweenCompleted");
 
-            level.AddChild(this);
+                AddChild(_tween);
 
-            Transform tform = this.Transform;
-            tform.origin = level.MapToWorld(x, y);
-            this.Transform = tform;
+                // Add myself to the world and set my position.
 
-            // Set my default state.
+                level.AddChild(this);
 
-            State = DoorState.Stopped;
-            Enabled = true;
-            
-            SetProcess(true);
-            SetPhysicsProcess(true);
+                Transform tform = this.Transform;
+                tform.origin = level.MapToWorld(x, y);
+                this.Transform = tform;
+
+                // Set my default state.
+
+                State = DoorState.Stopped;
+                Enabled = true;
+
+                SetProcess(true);
+                SetPhysicsProcess(true);
+            }
         }
 
         public DoorState State

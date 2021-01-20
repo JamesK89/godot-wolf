@@ -78,138 +78,141 @@ namespace Wolf
 
         public DoorSliding(int x, int y, Level level)
         {
-            Location = new Point2(x, y);
-            Level = level;
-
-            Type = (DoorType)level.Map.Planes[(int)Level.Planes.Walls][y, x];
-
-            level.Cells[y, x] = Level.Cell.Default();
-
-            // Adjust neighboring walls to show the door excavation.
-
-            if (!IsVertical)
+            if (level != null)
             {
-                if ((x - 1) > -1 &&
-                    level.Cells[y, x - 1].East != Level.Cell.NoWall)
+                Location = new Point2(x, y);
+                Level = level;
+
+                Type = (DoorType)level.Map.Planes[(int)Level.Planes.Walls][y, x];
+
+                level.Cells[y, x] = Level.Cell.Default();
+
+                // Adjust neighboring walls to show the door excavation.
+
+                if (!IsVertical)
                 {
-                    level.Cells[y, x - 1].East = DoorWestEastWall;
+                    if ((x - 1) > -1 &&
+                        level.Cells[y, x - 1].East != Level.Cell.NoWall)
+                    {
+                        level.Cells[y, x - 1].East = DoorWestEastWall;
+                    }
+
+                    if ((x + 1) < level.Map.Width &&
+                        level.Cells[y, x + 1].West != Level.Cell.NoWall)
+                    {
+                        level.Cells[y, x + 1].West = DoorWestEastWall;
+                    }
+                }
+                else
+                {
+                    if ((y + 1) < level.Map.Height &&
+                        level.Cells[y + 1, x].North != Level.Cell.NoWall)
+                    {
+                        level.Cells[y + 1, x].North = DoorNorthSouthWall;
+                    }
+
+                    if ((y - 1) > -1 &&
+                        level.Cells[y - 1, x].South != Level.Cell.NoWall)
+                    {
+                        level.Cells[y - 1, x].South = DoorNorthSouthWall;
+                    }
                 }
 
-                if ((x + 1) < level.Map.Width &&
-                    level.Cells[y, x + 1].West != Level.Cell.NoWall)
+                // Create a static body for the cell so that
+                // we can block the player from entering or exiting the cell
+                // when the door is closed or moving.
+
+                _cellShape = new CollisionShape();
+                BoxShape box = new BoxShape();
+                box.Extents = new Vector3(Level.CellSize * 0.5f, Level.CellSize * 0.5f, Level.CellSize * 0.5f);
+
+                _cellShape.Shape = box;
+                _cellShape.Name = "CollisionShape";
+
+                _cellBody = new StaticBody();
+                _cellBody.CollisionLayer = (uint)Level.CollisionLayers.Static;
+                _cellBody.CollisionMask = (uint)(Level.CollisionLayers.Characters);
+                _cellBody.AddChild(_cellShape);
+
+                AddChild(_cellBody);
+
+                // Create the actual mesh for the door and set it up for
+                // this particular instance.
+
+                BuildDoorMesh();
+
+                _mesh = new MeshInstance();
+                _mesh.Mesh = _doorMesh;
+                _mesh.MaterialOverride = Assets.GetTexture(_doorTexture[Type]);
+
+                if (IsVertical)
                 {
-                    level.Cells[y, x + 1].West = DoorWestEastWall;
+                    _mesh.Transform = Transform.Identity.Rotated(Vector3.Up, Mathf.Pi * 0.5f);
                 }
-            }
-            else
-            {
-                if ((y + 1) < level.Map.Height &&
-                    level.Cells[y + 1, x].North != Level.Cell.NoWall)
+                else
                 {
-                    level.Cells[y + 1, x].North = DoorNorthSouthWall;
+                    _mesh.Transform = Transform.Identity.Rotated(Vector3.Up, Mathf.Pi);
                 }
 
-                if ((y - 1) > -1 &&
-                    level.Cells[y - 1, x].South != Level.Cell.NoWall)
-                {
-                    level.Cells[y - 1, x].South = DoorNorthSouthWall;
-                }
+                // Setup a physics body for the door itself for the purposes
+                // of detecting collisions with projectiles since projectiles shouldn't
+                // be blocked by the cell's static body that is normally only used for
+                // ensuring characters can't enter or exit the cell if the door is closed
+                // or moving.
+
+                _doorShape = new CollisionShape();
+                box = new BoxShape();
+                box.Extents = new Vector3(Level.CellSize * 0.5f, Level.CellSize * 0.5f, Mathf.Epsilon);
+
+                _doorShape.Shape = box;
+                _doorShape.Name = "CollisionShape";
+
+                _doorBody = new RigidBody();
+                _doorBody.CollisionLayer = (uint)Level.CollisionLayers.Doors;
+                _doorBody.CollisionMask = (uint)Level.CollisionLayers.Projectiles;
+                _doorBody.AddChild(_doorShape);
+                _doorBody.Mode = RigidBody.ModeEnum.Static;
+
+                _mesh.AddChild(_doorBody);
+
+                AddChild(_mesh);
+
+                // Add myself to the world and set my position
+                // along with some default state variables.
+
+                level.AddChild(this);
+
+                Transform tform = this.Transform;
+                tform.origin = level.MapToWorld(x, y);
+                this.Transform = tform;
+
+                State = DoorState.Closed;
+
+                _openCloseDuration = 0.75f;
+                _canClose = true;
+
+                _openSound = Assets.GetSoundClip(Assets.DigitalSoundList.DoorOpening);
+                _closeSound = Assets.GetSoundClip(Assets.DigitalSoundList.DoorClosing);
+
+                // Add a tween node for controlling the animation of the
+                // door opening and closing.
+
+                _tween = new Tween();
+                _tween.Connect("tween_all_completed", this, "OnTweenCompleted");
+
+                _mesh.AddChild(_tween);
+
+                // Add an audio player so we can emit a sound
+                // when the door opens and closes.
+
+                _audioPlayer = new AudioStreamPlayer3D();
+                _audioPlayer.Name = "AudioPlayer";
+
+                AddChild(_audioPlayer);
+
+                SetProcess(true);
+                SetPhysicsProcess(true);
             }
-
-            // Create a static body for the cell so that
-            // we can block the player from entering or exiting the cell
-            // when the door is closed or moving.
-
-            _cellShape = new CollisionShape();
-            BoxShape box = new BoxShape();
-            box.Extents = new Vector3(Level.CellSize * 0.5f, Level.CellSize * 0.5f, Level.CellSize * 0.5f);
-
-            _cellShape.Shape = box;
-            _cellShape.Name = "CollisionShape";
-
-            _cellBody = new StaticBody();
-            _cellBody.CollisionLayer = (uint)Level.CollisionLayers.Static;
-            _cellBody.CollisionMask = (uint)(Level.CollisionLayers.Characters);
-            _cellBody.AddChild(_cellShape);
-
-            AddChild(_cellBody);
-
-            // Create the actual mesh for the door and set it up for
-            // this particular instance.
-
-            BuildDoorMesh();
-
-            _mesh = new MeshInstance();
-            _mesh.Mesh = _doorMesh;
-            _mesh.MaterialOverride = Assets.GetTexture(_doorTexture[Type]);
-
-            if (IsVertical)
-            {
-                _mesh.Transform = Transform.Identity.Rotated(Vector3.Up, Mathf.Pi * 0.5f);
-            }
-            else
-            {
-                _mesh.Transform = Transform.Identity.Rotated(Vector3.Up, Mathf.Pi);
-            }
-
-            // Setup a physics body for the door itself for the purposes
-            // of detecting collisions with projectiles since projectiles shouldn't
-            // be blocked by the cell's static body that is normally only used for
-            // ensuring characters can't enter or exit the cell if the door is closed
-            // or moving.
-
-            _doorShape = new CollisionShape();
-            box = new BoxShape();
-            box.Extents = new Vector3(Level.CellSize * 0.5f, Level.CellSize * 0.5f, Mathf.Epsilon);
-
-            _doorShape.Shape = box;
-            _doorShape.Name = "CollisionShape";
-
-            _doorBody = new RigidBody();
-            _doorBody.CollisionLayer = (uint)Level.CollisionLayers.Doors;
-            _doorBody.CollisionMask = (uint)Level.CollisionLayers.Projectiles;
-            _doorBody.AddChild(_doorShape);
-            _doorBody.Mode = RigidBody.ModeEnum.Static;
-
-            _mesh.AddChild(_doorBody);
-
-            AddChild(_mesh);
-
-            // Add myself to the world and set my position
-            // along with some default state variables.
-
-            level.AddChild(this);
-            
-            Transform tform = this.Transform;
-            tform.origin = level.MapToWorld(x, y);
-            this.Transform = tform;
-
-            State = DoorState.Closed;
-
-            _openCloseDuration = 0.75f;
-            _canClose = true;
-
-            _openSound = Assets.GetSoundClip(Assets.DigitalSoundList.DoorOpening);
-            _closeSound = Assets.GetSoundClip(Assets.DigitalSoundList.DoorClosing);
-
-            // Add a tween node for controlling the animation of the
-            // door opening and closing.
-
-            _tween = new Tween();
-            _tween.Connect("tween_all_completed", this, "OnTweenCompleted");
-
-            _mesh.AddChild(_tween);
-
-            // Add an audio player so we can emit a sound
-            // when the door opens and closes.
-
-            _audioPlayer = new AudioStreamPlayer3D();
-            _audioPlayer.Name = "AudioPlayer";
-
-            AddChild(_audioPlayer);
-
-            SetProcess(true);
-            SetPhysicsProcess(true);
         }
 
         public override void _Ready()

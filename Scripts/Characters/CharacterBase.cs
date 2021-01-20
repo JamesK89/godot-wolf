@@ -13,47 +13,55 @@ namespace Wolf
             Player_West = 22
         }
 
-        public CharacterBase(int x, int y, Level level)
+        private CharacterBase()
         {
-            Level = level;
+        }
 
-            Location = new Point2(x, y);
+        public CharacterBase(int x, int y, Level level)
+            : this()
+        {
+            if (level != null)
+            {
+                Level = level;
 
-            Type = (CharacterType)level.Map.Planes[(int)Level.Planes.Objects][y, x];
+                Location = new Point2(x, y);
 
-            SetAxisLock(PhysicsServer.BodyAxis.AngularX, true);
-            SetAxisLock(PhysicsServer.BodyAxis.AngularY, true);
-            SetAxisLock(PhysicsServer.BodyAxis.AngularZ, true);
+                Type = (CharacterType)level.Map.Planes[(int)Level.Planes.Objects][y, x];
 
-            MoveLockY = true;
+                SetAxisLock(PhysicsServer.BodyAxis.AngularX, true);
+                SetAxisLock(PhysicsServer.BodyAxis.AngularY, true);
+                SetAxisLock(PhysicsServer.BodyAxis.AngularZ, true);
 
-            CollisionShape colShape = new CollisionShape();
-            CylinderShape cylShape = new CylinderShape();
+                MoveLockY = true;
 
-            cylShape.Height = Level.CellSize;
-            cylShape.Radius = Level.CellSize * 0.25f;
+                CollisionShape colShape = new CollisionShape();
+                CylinderShape cylShape = new CylinderShape();
 
-            colShape.Shape = cylShape;
+                cylShape.Height = Level.CellSize;
+                cylShape.Radius = Level.CellSize * 0.25f;
 
-            AddChild(colShape);
+                colShape.Shape = cylShape;
 
-            CollisionLayer = (uint)Level.CollisionLayers.Characters;
-            CollisionMask = (uint)(
-                Level.CollisionLayers.Characters |
-                Level.CollisionLayers.Static |
-                Level.CollisionLayers.Doors |
-                Level.CollisionLayers.Walls |
-                Level.CollisionLayers.Projectiles);
+                AddChild(colShape);
 
-            Level.AddChild(this);
+                CollisionLayer = (uint)Level.CollisionLayers.Characters;
+                CollisionMask = (uint)(
+                    Level.CollisionLayers.Characters |
+                    Level.CollisionLayers.Static |
+                    Level.CollisionLayers.Doors |
+                    Level.CollisionLayers.Walls |
+                    Level.CollisionLayers.Projectiles);
 
-            Transform tform = this.Transform;
+                Level.AddChild(this);
 
-            tform.origin = level.MapToWorld(x, y);
+                Transform tform = this.Transform;
 
-            this.Transform = tform;
+                tform.origin = level.MapToWorld(x, y);
 
-            SetPhysicsProcess(true);
+                this.Transform = tform;
+
+                SetPhysicsProcess(true);
+            }
         }
 
         public Vector3 Velocity

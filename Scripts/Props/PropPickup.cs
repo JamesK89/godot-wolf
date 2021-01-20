@@ -19,18 +19,21 @@ namespace Wolf
 		public PropPickup(int x, int y, Level level)
 			: base(x, y, level)
 		{
-			BoxShape box = new BoxShape();
-			box.Extents = new Vector3(Level.CellSize * 0.25f, Level.CellSize * 0.5f, Level.CellSize * 0.25f);
+			if (level != null)
+			{
+				BoxShape box = new BoxShape();
+				box.Extents = new Vector3(Level.CellSize * 0.25f, Level.CellSize * 0.5f, Level.CellSize * 0.25f);
 
-			_areaShape = new CollisionShape();
-			_areaShape.Shape = box;
+				_areaShape = new CollisionShape();
+				_areaShape.Shape = box;
 
-			_area = new Area();
-			_area.AddChild(_areaShape);
+				_area = new Area();
+				_area.AddChild(_areaShape);
 
-			AddChild(_area);
+				AddChild(_area);
 
-			_area.Connect("body_entered", this, "OnBodyEntered");
+				_area.Connect("body_entered", this, "OnBodyEntered");
+			}
 		}
 
 		private void OnBodyEntered(Node node)
