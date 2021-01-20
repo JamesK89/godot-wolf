@@ -121,8 +121,8 @@ namespace Wolf
             if (level != null)
             {
                 Level = level;
-                Type = (PropType)Level.Map.Planes[(int)Level.Planes.Objects].Data[x, y];
-                Location = (x, y);
+                Type = (PropType)Level.Map.Planes[(int)Level.Planes.Objects][y, x];
+                Location = new Point2(x, y);
 
                 Billboard = SpatialMaterial.BillboardMode.FixedY;
                 Texture = (Assets.GetSprite(PropSpriteIndices[Type]) as SpatialMaterial).AlbedoTexture;
@@ -150,7 +150,7 @@ namespace Wolf
             protected set;
         }
 
-        public (int X, int Y) Location
+        public Point2 Location
         {
             get;
             protected set;

@@ -17,9 +17,9 @@ namespace Wolf
         {
             Level = level;
 
-            Location = (x, y);
+            Location = new Point2(x, y);
 
-            Type = (CharacterType)level.Map.Planes[(int)Level.Planes.Objects].Data[x, y];
+            Type = (CharacterType)level.Map.Planes[(int)Level.Planes.Objects][y, x];
 
             SetAxisLock(PhysicsServer.BodyAxis.AngularX, true);
             SetAxisLock(PhysicsServer.BodyAxis.AngularY, true);
@@ -74,7 +74,7 @@ namespace Wolf
             protected set;
         }
 
-        public (int X, int Y) Location
+        public Point2 Location
         {
             get;
             protected set;

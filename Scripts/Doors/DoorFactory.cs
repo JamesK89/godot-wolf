@@ -11,9 +11,9 @@ namespace Wolf
         {
             DoorSliding ret = null;
 
-            int rawId = (int)level.Map.Planes[(int)Level.Planes.Walls].Data[x, y];
+            int wallId = (int)level.Map.Planes[(int)Level.Planes.Walls][y, x];
 
-            if (Enum.IsDefined(typeof(DoorType), rawId))
+            if (Enum.IsDefined(typeof(DoorType), wallId))
             {
                 ret = new DoorSliding(x, y, level);
             }
@@ -25,9 +25,11 @@ namespace Wolf
         {
             DoorSecret ret = null;
 
-            ushort rawId = level.Map.Planes[(int)Level.Planes.Objects].Data[x, y];
+            ushort objId = level.Map.Planes[(int)Level.Planes.Objects][y, x];
+            ushort wallId = level.Map.Planes[(int)Level.Planes.Walls][y, x];
 
-            if (DoorSecret.DoorSecretId == (int)rawId)
+            if (DoorSecret.DoorSecretId == (int)objId &&
+                wallId >= Level.MapWallBegin && wallId <= Level.MapWallEnd)
             {
                 ret = new DoorSecret(x, y, level);
             }

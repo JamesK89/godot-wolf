@@ -54,7 +54,23 @@ namespace Wolf
         private Tween _tween;
 
         private float _openTimer;
+        
         private bool _canClose;
+
+        private float _openCloseDuration;
+
+        private AudioStreamSample _openSound;
+        private AudioStreamSample _closeSound;
+
+        private AudioStreamPlayer3D _audioPlayer;
+
+        private CollisionShape _cellShape;
+        private StaticBody _cellBody;
+
+        private CollisionShape _doorShape;
+        private RigidBody _doorBody;
+
+        private MeshInstance _mesh;
 
         private DoorSliding()
         {
@@ -62,114 +78,135 @@ namespace Wolf
 
         public DoorSliding(int x, int y, Level level)
         {
-            Location = (x, y);
+            Location = new Point2(x, y);
             Level = level;
 
-            Type = (DoorType)level.Map.Planes[0].Data[x, y];
+            Type = (DoorType)level.Map.Planes[(int)Level.Planes.Walls][y, x];
 
-            level.Cells[x, y] = Level.Cell.Default();
+            level.Cells[y, x] = Level.Cell.Default();
 
-            if (IsVertical)
+            // Adjust neighboring walls to show the door excavation.
+
+            if (!IsVertical)
             {
                 if ((x - 1) > -1 &&
-                    level.Cells[x - 1, y].East != Level.Cell.NoWall)
+                    level.Cells[y, x - 1].East != Level.Cell.NoWall)
                 {
-                    level.Cells[x - 1, y].East = DoorWestEastWall;
+                    level.Cells[y, x - 1].East = DoorWestEastWall;
                 }
 
                 if ((x + 1) < level.Map.Width &&
-                    level.Cells[x + 1, y].West != Level.Cell.NoWall)
+                    level.Cells[y, x + 1].West != Level.Cell.NoWall)
                 {
-                    level.Cells[x + 1, y].West = DoorWestEastWall;
+                    level.Cells[y, x + 1].West = DoorWestEastWall;
                 }
             }
             else
             {
                 if ((y + 1) < level.Map.Height &&
-                    level.Cells[x, y + 1].North != Level.Cell.NoWall)
+                    level.Cells[y + 1, x].North != Level.Cell.NoWall)
                 {
-                    level.Cells[x, y + 1].North = DoorNorthSouthWall;
+                    level.Cells[y + 1, x].North = DoorNorthSouthWall;
                 }
 
                 if ((y - 1) > -1 &&
-                    level.Cells[x, y - 1].South != Level.Cell.NoWall)
+                    level.Cells[y - 1, x].South != Level.Cell.NoWall)
                 {
-                    level.Cells[x, y - 1].South = DoorNorthSouthWall;
+                    level.Cells[y - 1, x].South = DoorNorthSouthWall;
                 }
             }
 
-            CollisionShape shape = new CollisionShape();
+            // Create a static body for the cell so that
+            // we can block the player from entering or exiting the cell
+            // when the door is closed or moving.
+
+            _cellShape = new CollisionShape();
             BoxShape box = new BoxShape();
             box.Extents = new Vector3(Level.CellSize * 0.5f, Level.CellSize * 0.5f, Level.CellSize * 0.5f);
 
-            shape.Shape = box;
-            shape.Name = "CollisionShape";
+            _cellShape.Shape = box;
+            _cellShape.Name = "CollisionShape";
 
-            CellBody = new StaticBody();
-            CellBody.CollisionLayer = (uint)Level.CollisionLayers.Static;
-            CellBody.CollisionMask = (uint)(Level.CollisionLayers.Characters);
-            CellBody.AddChild(shape);
+            _cellBody = new StaticBody();
+            _cellBody.CollisionLayer = (uint)Level.CollisionLayers.Static;
+            _cellBody.CollisionMask = (uint)(Level.CollisionLayers.Characters);
+            _cellBody.AddChild(_cellShape);
 
-            AddChild(CellBody);
+            AddChild(_cellBody);
+
+            // Create the actual mesh for the door and set it up for
+            // this particular instance.
 
             BuildDoorMesh();
 
-            Mesh = new MeshInstance();
-            Mesh.Mesh = _doorMesh;
-            Mesh.MaterialOverride = Assets.GetTexture(_doorTexture[Type]);
+            _mesh = new MeshInstance();
+            _mesh.Mesh = _doorMesh;
+            _mesh.MaterialOverride = Assets.GetTexture(_doorTexture[Type]);
 
-            if (!IsVertical)
+            if (IsVertical)
             {
-                Mesh.Transform = Transform.Identity.Rotated(Vector3.Up, Mathf.Pi * 0.5f);
+                _mesh.Transform = Transform.Identity.Rotated(Vector3.Up, Mathf.Pi * 0.5f);
+            }
+            else
+            {
+                _mesh.Transform = Transform.Identity.Rotated(Vector3.Up, Mathf.Pi);
             }
 
-            shape = new CollisionShape();
+            // Setup a physics body for the door itself for the purposes
+            // of detecting collisions with projectiles since projectiles shouldn't
+            // be blocked by the cell's static body that is normally only used for
+            // ensuring characters can't enter or exit the cell if the door is closed
+            // or moving.
+
+            _doorShape = new CollisionShape();
             box = new BoxShape();
             box.Extents = new Vector3(Level.CellSize * 0.5f, Level.CellSize * 0.5f, Mathf.Epsilon);
 
-            shape.Shape = box;
-            shape.Name = "CollisionShape";
+            _doorShape.Shape = box;
+            _doorShape.Name = "CollisionShape";
 
-            DoorBody = new RigidBody();
-            DoorBody.CollisionLayer = (uint)Level.CollisionLayers.Doors;
-            DoorBody.CollisionMask = (uint)Level.CollisionLayers.Projectiles;
-            DoorBody.AddChild(shape);
-            DoorBody.Mode = RigidBody.ModeEnum.Static;
+            _doorBody = new RigidBody();
+            _doorBody.CollisionLayer = (uint)Level.CollisionLayers.Doors;
+            _doorBody.CollisionMask = (uint)Level.CollisionLayers.Projectiles;
+            _doorBody.AddChild(_doorShape);
+            _doorBody.Mode = RigidBody.ModeEnum.Static;
 
-            Mesh.AddChild(DoorBody);
+            _mesh.AddChild(_doorBody);
 
-            AddChild(Mesh);
+            AddChild(_mesh);
+
+            // Add myself to the world and set my position
+            // along with some default state variables.
 
             level.AddChild(this);
-
-            Vector3 origin = new Vector3(
-                (((float)level.Map.Width * Level.CellSize) - ((float)x * Level.CellSize)) + (Level.CellSize * 0.5f),
-                0,
-                ((float)y * Level.CellSize) + (Level.CellSize * 0.5f));
-
+            
             Transform tform = this.Transform;
-
-            tform.origin = origin;
-
+            tform.origin = level.MapToWorld(x, y);
             this.Transform = tform;
 
             State = DoorState.Closed;
-            Speed = 0.75f;
+
+            _openCloseDuration = 0.75f;
+            _canClose = true;
+
+            _openSound = Assets.GetSoundClip(Assets.DigitalSoundList.DoorOpening);
+            _closeSound = Assets.GetSoundClip(Assets.DigitalSoundList.DoorClosing);
+
+            // Add a tween node for controlling the animation of the
+            // door opening and closing.
 
             _tween = new Tween();
             _tween.Connect("tween_all_completed", this, "OnTweenCompleted");
 
-            Mesh.AddChild(_tween);
+            _mesh.AddChild(_tween);
 
-            AudioStreamPlayer3D audioPlayer = new AudioStreamPlayer3D();
-            audioPlayer.Name = "AudioPlayer";
+            // Add an audio player so we can emit a sound
+            // when the door opens and closes.
 
-            AddChild(audioPlayer);
+            _audioPlayer = new AudioStreamPlayer3D();
+            _audioPlayer.Name = "AudioPlayer";
 
-            OpenSound = Assets.GetSoundClip(3);
-            CloseSound = Assets.GetSoundClip(2);
-
-            _canClose = true;
+            AddChild(_audioPlayer);
 
             SetProcess(true);
             SetPhysicsProcess(true);
@@ -195,38 +232,18 @@ namespace Wolf
             }
         }
 
-        public AudioStreamSample OpenSound
-        {
-            get;
-            set;
-        }
-
-        public AudioStreamSample CloseSound
-        {
-            get;
-            set;
-        }
-
-        public float Speed
-        {
-            get;
-            set;
-        }
-
         private void OnTweenCompleted()
         {
-            CollisionShape shape = CellBody.GetNode<CollisionShape>("CollisionShape");
-
             switch (State)
             {
                 case DoorState.Opening:
                     State = DoorState.Opened;
-                    shape.Disabled = true;
+                    _cellShape.Disabled = true;
                     _openTimer = StayOpenTime;
                     break;
                 case DoorState.Closing:
                     State = DoorState.Closed;
-                    shape.Disabled = false;
+                    _cellShape.Disabled = false;
                     break;
             }
         }
@@ -244,17 +261,16 @@ namespace Wolf
             {
                 State = DoorState.Opening;
 
-                Vector3 openPosition = IsVertical ? new Vector3(Level.CellSize * -1f, 0, 0) : new Vector3(0, 0, Level.CellSize);
+                Vector3 openPosition = IsVertical ? new Vector3(0, 0, Level.CellSize) : new Vector3(Level.CellSize, 0, 0);
 
                 _tween.PlaybackProcessMode = Tween.TweenProcessMode.Physics;
-                _tween.InterpolateProperty(Mesh, "translation", Mesh.Translation, openPosition, Speed, Tween.TransitionType.Linear, Tween.EaseType.InOut);
+                _tween.InterpolateProperty(_mesh, "translation", _mesh.Translation, openPosition, _openCloseDuration, Tween.TransitionType.Linear, Tween.EaseType.InOut);
                 _tween.ResetAll();
                 _tween.Start();
-
-                AudioStreamPlayer3D audioPlayer = GetNode<AudioStreamPlayer3D>("AudioPlayer");
-                audioPlayer.Stream = OpenSound;
-                audioPlayer.Seek(0.0f);
-                audioPlayer.Play();
+                
+                _audioPlayer.Stream = _openSound;
+                _audioPlayer.Seek(0.0f);
+                _audioPlayer.Play();
 
                 success = true;
             }
@@ -271,17 +287,15 @@ namespace Wolf
                 State = DoorState.Closing;
 
                 _tween.PlaybackProcessMode = Tween.TweenProcessMode.Physics;
-                _tween.InterpolateProperty(Mesh, "translation", Mesh.Translation, Vector3.Zero, Speed, Tween.TransitionType.Linear, Tween.EaseType.InOut);
+                _tween.InterpolateProperty(_mesh, "translation", _mesh.Translation, Vector3.Zero, _openCloseDuration, Tween.TransitionType.Linear, Tween.EaseType.InOut);
                 _tween.ResetAll();
                 _tween.Start();
-
-                CollisionShape shape = CellBody.GetNode<CollisionShape>("CollisionShape");
-                shape.Disabled = false;
-
-                AudioStreamPlayer3D audioPlayer = GetNode<AudioStreamPlayer3D>("AudioPlayer");
-                audioPlayer.Stream = CloseSound;
-                audioPlayer.Seek(0.0f);
-                audioPlayer.Play();
+                
+                _cellShape.Disabled = false;
+                
+                _audioPlayer.Stream = _closeSound;
+                _audioPlayer.Seek(0.0f);
+                _audioPlayer.Play();
 
                 success = true;
             }
@@ -334,32 +348,14 @@ namespace Wolf
             get;
             protected set;
         }
-
-        public MeshInstance Mesh
-        {
-            get;
-            protected set;
-        }
-
-        public StaticBody CellBody
-        {
-            get;
-            protected set;
-        }
-
-        public RigidBody DoorBody
-        {
-            get;
-            protected set;
-        }
-
+        
         public Level Level
         {
             get;
             protected set;
         }
 
-        public (int X, int Y) Location
+        public Point2 Location
         {
             get;
             protected set;
@@ -390,16 +386,14 @@ namespace Wolf
         {
             if (State == DoorState.Opened)
             {
-                var space =  CellBody.GetWorld().DirectSpaceState;
+                var space =  _cellBody.GetWorld().DirectSpaceState;
                 var query = new PhysicsShapeQueryParameters();
-
-                CollisionShape colNode = CellBody.GetNode<CollisionShape>("CollisionShape");
-
-                query.SetShape(colNode.Shape);
+                
+                query.SetShape(_cellShape.Shape);
                 query.CollisionMask = (int)Level.CollisionLayers.Characters;
                 query.CollideWithBodies = true;
                 query.CollideWithAreas = false;
-                query.Transform = colNode.GlobalTransform;
+                query.Transform = _cellShape.GlobalTransform;
 
                 var results = space.IntersectShape(query);
                 
@@ -428,55 +422,55 @@ namespace Wolf
 
                 st.Begin(Godot.Mesh.PrimitiveType.Triangles);
 
-                st.AddUv(new Vector2(1f, 1f));
+                st.AddUv(new Vector2(0f, 1f));
                 st.AddColor(white);
                 st.AddNormal(Level.South);
                 st.AddVertex(verts[3]);
-                st.AddUv(new Vector2(1f, 0f));
+                st.AddUv(new Vector2(0f, 0f));
                 st.AddColor(white);
                 st.AddNormal(Level.South);
                 st.AddVertex(verts[1]);
-                st.AddUv(new Vector2(0f, 0f));
+                st.AddUv(new Vector2(1f, 0f));
                 st.AddColor(white);
                 st.AddNormal(Level.South);
                 st.AddVertex(verts[0]);
 
-                st.AddUv(new Vector2(0f, 1f));
+                st.AddUv(new Vector2(1f, 1f));
                 st.AddColor(white);
                 st.AddNormal(Level.South);
                 st.AddVertex(verts[2]);
-                st.AddUv(new Vector2(1f, 1f));
+                st.AddUv(new Vector2(0f, 1f));
                 st.AddColor(white);
                 st.AddNormal(Level.South);
                 st.AddVertex(verts[3]);
-                st.AddUv(new Vector2(0f, 0f));
+                st.AddUv(new Vector2(1f, 0f));
                 st.AddColor(white);
                 st.AddNormal(Level.South);
                 st.AddVertex(verts[0]);
 
 
-                st.AddUv(new Vector2(0f, 0f));
-                st.AddColor(white);
-                st.AddNormal(Level.North);
-                st.AddVertex(verts[0]);
                 st.AddUv(new Vector2(1f, 0f));
                 st.AddColor(white);
                 st.AddNormal(Level.North);
+                st.AddVertex(verts[0]);
+                st.AddUv(new Vector2(0f, 0f));
+                st.AddColor(white);
+                st.AddNormal(Level.North);
                 st.AddVertex(verts[1]);
-                st.AddUv(new Vector2(1f, 1f));
+                st.AddUv(new Vector2(0f, 1f));
                 st.AddColor(white);
                 st.AddNormal(Level.North);
                 st.AddVertex(verts[3]);
 
-                st.AddUv(new Vector2(0f, 0f));
+                st.AddUv(new Vector2(1f, 0f));
                 st.AddColor(white);
                 st.AddNormal(Level.North);
                 st.AddVertex(verts[0]);
-                st.AddUv(new Vector2(1f, 1f));
+                st.AddUv(new Vector2(0f, 1f));
                 st.AddColor(white);
                 st.AddNormal(Level.North);
                 st.AddVertex(verts[3]);
-                st.AddUv(new Vector2(0f, 1f));
+                st.AddUv(new Vector2(1f, 1f));
                 st.AddColor(white);
                 st.AddNormal(Level.North);
                 st.AddVertex(verts[2]);

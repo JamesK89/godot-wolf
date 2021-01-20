@@ -21,67 +21,49 @@ namespace Wolf
             set;
         }
 
+        private RayCast _useRay;
+        private Camera _camera;
+
+        private float _moveSpeed;
+        private float _turnSpeed;
+
         public CharacterPlayer(int x, int y, Level level)
             : base(x, y, level)
         {
-            Camera = new Camera();
-            Camera.Current = true;
+            _camera = new Camera();
+            _camera.Current = true;
 
             switch (Type)
             {
                 case CharacterType.Player_East:
-                    Camera.Transform = Transform.Identity.Rotated(Vector3.Up, Mathf.Pi);
+                    _camera.Transform = Transform.Identity.Rotated(Vector3.Up, Mathf.Pi * -0.5f);
                 break;
-                case CharacterType.Player_North:
-                    Camera.Transform = Transform.Identity.Rotated(Vector3.Up, Mathf.Pi * -0.5f);
+                case CharacterType.Player_West:
+                    _camera.Transform = Transform.Identity.Rotated(Vector3.Up, Mathf.Pi * 0.5f);
                 break;
                 case CharacterType.Player_South:
-                    Camera.Transform = Transform.Identity.Rotated(Vector3.Up, Mathf.Pi * 0.5f);
+                    _camera.Transform = Transform.Identity.Rotated(Vector3.Up, Mathf.Pi * -1.0f);
                 break;
             }
 
-            MoveSpeed = Level.CellSize * 200.0f;
-            TurnSpeed = 3f;
+            _moveSpeed = Level.CellSize * 200.0f;
+            _turnSpeed = 3f;
 
-            UseRay = new RayCast();
-            UseRay.Enabled = true;
-            UseRay.ExcludeParent = true;
-            UseRay.CastTo = Vector3.Forward * (Level.CellSize * 0.5f);
-            UseRay.CollisionMask = (uint)(
+            _useRay = new RayCast();
+            _useRay.Enabled = true;
+            _useRay.ExcludeParent = true;
+            _useRay.CastTo = Vector3.Forward * (Level.CellSize * 0.5f);
+            _useRay.CollisionMask = (uint)(
                 Level.CollisionLayers.Characters | 
                 Level.CollisionLayers.Static | 
                 Level.CollisionLayers.Walls);
-            UseRay.AddException(this);
+            _useRay.AddException(this);
 
-            Camera.AddChild(UseRay);
-            AddChild(Camera);
+            _camera.AddChild(_useRay);
+            AddChild(_camera);
             
             SetProcess(true);
             SetPhysicsProcess(true);
-        }
-
-        public RayCast UseRay
-        {
-            get;
-            private set;
-        }
-
-        public Camera Camera
-        {
-            get;
-            private set;
-        }
-
-        public float MoveSpeed
-        {
-            get;
-            set;
-        }
-
-        public float TurnSpeed
-        {
-            get;
-            set;
         }
 
         protected virtual void ProcessMovement(float delta)
@@ -115,24 +97,26 @@ namespace Wolf
                 yaw = -1.0f;
             }
 
-            Camera.Transform = Camera.Transform.Rotated(Vector3.Up, yaw * TurnSpeed * delta);
+            _camera.Transform = _camera.Transform.Rotated(Vector3.Up, yaw * _turnSpeed * delta);
         }
 
         protected virtual void ProcessUseRay(float delta)
         {
             if (Input.IsActionJustPressed("use"))
             {
-                if (UseRay.IsColliding())
+                if (_useRay.IsColliding())
                 {
-                    Node collider = (Node)UseRay.GetCollider();
+                    Node node = _useRay.GetCollider() as Node;
 
-                    if (collider.HasMethod("Use"))
+                    while (node != null)
                     {
-                        collider.Call("Use", this);
-                    }
-                    else if (collider.GetParent()?.HasMethod("Use") ?? false)
-                    {
-                        collider.GetParent().Call("Use", this);
+                        if (node.HasMethod("Use"))
+                        {
+                            node.Call("Use", this);
+                            break;
+                        }
+
+                        node = node.GetParent();
                     }
                 }
             }
@@ -154,11 +138,11 @@ namespace Wolf
 
             if (InputFlags.HasFlag(InputMoveFlags.Move_Forward))
             {
-                DesiredVelocity = Camera.Transform.basis.z * MoveSpeed * -1f;
+                DesiredVelocity = _camera.Transform.basis.z * _moveSpeed * -1f;
             }
             else if (InputFlags.HasFlag(InputMoveFlags.Move_Backward))
             {
-                DesiredVelocity = Camera.Transform.basis.z * MoveSpeed;
+                DesiredVelocity = _camera.Transform.basis.z * _moveSpeed;
             }
 
             DesiredVelocity *= delta;

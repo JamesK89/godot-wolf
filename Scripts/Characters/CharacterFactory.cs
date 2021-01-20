@@ -20,7 +20,7 @@ namespace Wolf
         {
             CharacterBase ret = null;
 
-            CharacterType type = (CharacterType)level.Map.Planes[(int)Level.Planes.Objects].Data[x, y];
+            CharacterType type = (CharacterType)level.Map.Planes[(int)Level.Planes.Objects][y, x];
 
             if (_charTypeMap.ContainsKey(type))
             {

@@ -9,14 +9,9 @@ namespace Wolf
 {
     public class Level : MeshInstance
     {
-        // Declare member variables here. Examples:
-        // private int a = 2;
-        // private string b = "text";
-
-        private const int MapWallBegin = 1;
-        private const int MapWallEnd = 63;
-
-
+        public const int MapWallBegin = 1;
+        public const int MapWallEnd = 63;
+        
         public enum Planes : int
         {
             Walls = 0,
@@ -25,8 +20,8 @@ namespace Wolf
 
         public static Vector3 North = new Vector3(0, 0, -1);
         public static Vector3 South = new Vector3(0, 0, 1);
-        public static Vector3 West = new Vector3(1, 0, 0);
-        public static Vector3 East = new Vector3(-1, 0, 0);
+        public static Vector3 West = new Vector3(-1, 0, 0);
+        public static Vector3 East = new Vector3(1, 0, 0);
 
         [Flags]
         public enum CollisionLayers : uint
@@ -58,7 +53,10 @@ namespace Wolf
             North = 1,
             East = 2,
             South = 4,
-            West = 8
+            West = 8,
+            North_South = North | South,
+            East_West = East | West,
+            All = North | East | South | West
         }
 
         public class Cell
@@ -145,9 +143,14 @@ namespace Wolf
         public Vector3 MapToWorld(int x, int y)
         {
             return new Vector3(
-                    (((float)Map.Width * Level.CellSize) - ((float)x * Level.CellSize)) + (Level.CellSize * 0.5f),
+                    ((float)x * Level.CellSize) + (Level.CellSize * 0.5f),
                     0,
                     ((float)y * Level.CellSize) + (Level.CellSize * 0.5f));
+        }
+
+        public (int x, int y) WorldToMap(Vector3 pos)
+        {
+            return ((int)(pos.x / Level.CellSize), (int)(pos.z / Level.CellSize));
         }
 
         // Called when the node enters the scene tree for the first time.
@@ -185,7 +188,7 @@ namespace Wolf
 
         private Cell[,] BuildCellsFromMap(wolfread.Map map)
         {
-            Cell[,] ret = new Cell[map.Width, map.Height];
+            Cell[,] ret = new Cell[map.Height, map.Width];
 
             for (int y = 0; y < map.Height; y++)
             {
@@ -193,16 +196,16 @@ namespace Wolf
                 {
                     Cell cube = Cell.Default();
 
-                    int mapValue = map.Planes[0].Data[x, y];
-                    int mapValue_pl1 = map.Planes[1].Data[x, y];
+                    int mapValue = map.Planes[0].Data[y, x];
+                    int mapValue_pl1 = map.Planes[1].Data[y, x];
 
                     if (mapValue >= MapWallBegin && mapValue <= MapWallEnd 
                         && mapValue_pl1 != DoorSecret.DoorSecretId)
                     {
                         if ((x + 1) < map.Width)
                         {
-                            int neighbor = map.Planes[0].Data[x + 1, y];
-                            int neighbor_pl1 = map.Planes[1].Data[x + 1, y];
+                            int neighbor = map.Planes[0].Data[y, x + 1];
+                            int neighbor_pl1 = map.Planes[1].Data[y, x + 1];
 
                             if (neighbor < MapWallBegin || neighbor > MapWallEnd || 
                                 neighbor_pl1 == DoorSecret.DoorSecretId)
@@ -213,8 +216,8 @@ namespace Wolf
 
                         if ((x - 1) > -1)
                         {
-                            int neighbor = map.Planes[0].Data[x - 1, y];
-                            int neighbor_pl1 = map.Planes[1].Data[x - 1, y];
+                            int neighbor = map.Planes[0].Data[y, x - 1];
+                            int neighbor_pl1 = map.Planes[1].Data[y, x - 1];
 
                             if (neighbor < MapWallBegin || neighbor > MapWallEnd || 
                                 neighbor_pl1 == DoorSecret.DoorSecretId)
@@ -225,8 +228,8 @@ namespace Wolf
 
                         if ((y + 1) < map.Height)
                         {
-                            int neighbor = map.Planes[0].Data[x, y + 1];
-                            int neighbor_pl1 = map.Planes[1].Data[x, y + 1];
+                            int neighbor = map.Planes[0].Data[y + 1, x];
+                            int neighbor_pl1 = map.Planes[1].Data[y + 1, x];
 
                             if (neighbor < MapWallBegin || neighbor > MapWallEnd || 
                                 neighbor_pl1 == DoorSecret.DoorSecretId)
@@ -237,8 +240,8 @@ namespace Wolf
 
                         if ((y - 1) > -1)
                         {
-                            int neighbor = map.Planes[0].Data[x, y - 1];
-                            int neighbor_pl1 = map.Planes[1].Data[x, y - 1];
+                            int neighbor = map.Planes[0].Data[y - 1, x];
+                            int neighbor_pl1 = map.Planes[1].Data[y - 1, x];
 
                             if (neighbor < MapWallBegin || neighbor > MapWallEnd || 
                                 neighbor_pl1 == DoorSecret.DoorSecretId)
@@ -248,7 +251,7 @@ namespace Wolf
                         }
                     }
 
-                    ret[x, y] = cube;
+                    ret[y, x] = cube;
                 }
             }
 
@@ -268,8 +271,8 @@ namespace Wolf
                     if (DoorFactory.CreateSlidingDoor(x, y, this) != null)
                         continue;
 
-                    if (DoorFactory.CreateSecretDoor(x, y, this) != null)
-                        continue;
+                    //if (DoorFactory.CreateSecretDoor(x, y, this) != null)
+                    //    continue;
 
                     if (PropFactory.CreateProp(x, y, this) != null)
                         continue;
@@ -287,6 +290,7 @@ namespace Wolf
             foreach (Node child in GetChildren())
             {
                 if (child is DoorSliding || 
+                    child is DoorSecret ||
                     child is PropBase || 
                     child is StaticBody ||
                     child is CharacterBase)
@@ -336,11 +340,11 @@ namespace Wolf
         {
             Dictionary<int, SurfaceTool> surfaces = new Dictionary<int, SurfaceTool>();
 
-            for (int x = 0; x < Map.Width; x++)
+            for (int y = 0; y < Map.Height; y++)
             {
-                for (int y = 0; y < Map.Height; y++)
+                for (int x = 0; x < Map.Width; x++)
                 {
-                    Cell cell = Cells[x, y];
+                    Cell cell = Cells[y, x];
 
                     var indices = (
                         new int[] {
@@ -373,35 +377,32 @@ namespace Wolf
                 kvp.Value.SetMaterial(Assets.GetTexture(kvp.Key));
             }
 
-            for (int x = 0; x < Map.Width; x++)
+            for (int y = 0; y < Map.Height; y++)
             {
-                for (int y = 0; y < Map.Height; y++)
+                for (int x = 0; x < Map.Width; x++)
                 {
-                    Cell cell = Cells[x, y];
+                    Cell cell = Cells[y, x];
 
-                    Vector3 pos = new Vector3(
-                        (((float)Map.Width * CellSize) - (((float)x * CellSize)) + (CellSize * 0.5f)),
-                        0,
-                        ((float)y * CellSize) + (CellSize * 0.5f));
+                    Vector3 pos = MapToWorld(x, y);
 
                     if (cell.North != Cell.NoWall)
                     {
-                        CreateCube(surfaces[cell.North], CellSize, pos, Sides.North, cell.North);
+                        CreateCube(surfaces[cell.North], CellSize, pos, Sides.North);
                     }
 
                     if (cell.East != Cell.NoWall)
                     {
-                        CreateCube(surfaces[cell.East], CellSize, pos, Sides.East, cell.East);
+                        CreateCube(surfaces[cell.East], CellSize, pos, Sides.East);
                     }
 
                     if (cell.South != Cell.NoWall)
                     {
-                        CreateCube(surfaces[cell.South], CellSize, pos, Sides.South, cell.South);
+                        CreateCube(surfaces[cell.South], CellSize, pos, Sides.South);
                     }
 
                     if (cell.West != Cell.NoWall)
                     {
-                        CreateCube(surfaces[cell.West], CellSize, pos, Sides.West, cell.West);
+                        CreateCube(surfaces[cell.West], CellSize, pos, Sides.West);
                     }
                 }
             }
@@ -460,13 +461,12 @@ namespace Wolf
             };
         }
 
-        private void CreateCube(SurfaceTool st, float size, Vector3 position, Sides sides, int index)
+        public static void CreateCube(SurfaceTool st, float size, Vector3 position, Sides sides)
         {
-            if (index >= 0 && (
-                sides.HasFlag(Sides.North) ||
+            if (sides.HasFlag(Sides.North) ||
                 sides.HasFlag(Sides.East) ||
                 sides.HasFlag(Sides.South) ||
-                sides.HasFlag(Sides.West)))
+                sides.HasFlag(Sides.West))
             {
                 Color white = new Color(1f, 1f, 1f, 1f);
 
@@ -474,118 +474,118 @@ namespace Wolf
 
                 if (sides.HasFlag(Sides.North))
                 {
-                    st.AddUv(new Vector2(0, 0));
-                    st.AddNormal(North);
-                    st.AddColor(white);
-                    st.AddVertex(vertices[(int)CellVertexIndex.Top_NW]);
-                    st.AddUv(new Vector2(1, 0));
-                    st.AddNormal(North);
-                    st.AddColor(white);
-                    st.AddVertex(vertices[(int)CellVertexIndex.Top_NE]);
-                    st.AddUv(new Vector2(0, 1));
-                    st.AddNormal(North);
-                    st.AddColor(white);
-                    st.AddVertex(vertices[(int)CellVertexIndex.Bot_NW]);
-
-                    st.AddUv(new Vector2(1, 0));
-                    st.AddNormal(North);
-                    st.AddColor(white);
-                    st.AddVertex(vertices[(int)CellVertexIndex.Top_NE]);
                     st.AddUv(new Vector2(1, 1));
                     st.AddNormal(North);
                     st.AddColor(white);
-                    st.AddVertex(vertices[(int)CellVertexIndex.Bot_NE]);
-                    st.AddUv(new Vector2(0, 1));
+                    st.AddVertex(vertices[(int)CellVertexIndex.Bot_NW]);
+                    st.AddUv(new Vector2(0, 0));
+                    st.AddNormal(North);
+                    st.AddColor(white);
+                    st.AddVertex(vertices[(int)CellVertexIndex.Top_NE]);
+                    st.AddUv(new Vector2(1, 0));
+                    st.AddNormal(North);
+                    st.AddColor(white);
+                    st.AddVertex(vertices[(int)CellVertexIndex.Top_NW]);
+
+                    st.AddUv(new Vector2(1, 1));
                     st.AddNormal(North);
                     st.AddColor(white);
                     st.AddVertex(vertices[(int)CellVertexIndex.Bot_NW]);
+                    st.AddUv(new Vector2(0, 1));
+                    st.AddNormal(North);
+                    st.AddColor(white);
+                    st.AddVertex(vertices[(int)CellVertexIndex.Bot_NE]);
+                    st.AddUv(new Vector2(0, 0));
+                    st.AddNormal(North);
+                    st.AddColor(white);
+                    st.AddVertex(vertices[(int)CellVertexIndex.Top_NE]);
                 }
 
                 if (sides.HasFlag(Sides.East))
                 {
-                    st.AddUv(new Vector2(1, 1));
-                    st.AddNormal(East);
-                    st.AddColor(white);
-                    st.AddVertex(vertices[(int)CellVertexIndex.Bot_SE]);
                     st.AddUv(new Vector2(0, 0));
-                    st.AddNormal(East);
-                    st.AddColor(white);
-                    st.AddVertex(vertices[(int)CellVertexIndex.Top_NE]);
-                    st.AddUv(new Vector2(1, 0));
                     st.AddNormal(East);
                     st.AddColor(white);
                     st.AddVertex(vertices[(int)CellVertexIndex.Top_SE]);
-
-                    st.AddUv(new Vector2(1, 1));
-                    st.AddNormal(East);
-                    st.AddColor(white);
-                    st.AddVertex(vertices[(int)CellVertexIndex.Bot_SE]);
-                    st.AddUv(new Vector2(0, 1));
-                    st.AddNormal(East);
-                    st.AddColor(white);
-                    st.AddVertex(vertices[(int)CellVertexIndex.Bot_NE]);
-                    st.AddUv(new Vector2(0, 0));
+                    st.AddUv(new Vector2(1, 0));
                     st.AddNormal(East);
                     st.AddColor(white);
                     st.AddVertex(vertices[(int)CellVertexIndex.Top_NE]);
+                    st.AddUv(new Vector2(0, 1));
+                    st.AddNormal(East);
+                    st.AddColor(white);
+                    st.AddVertex(vertices[(int)CellVertexIndex.Bot_SE]);
+
+                    st.AddUv(new Vector2(1, 0));
+                    st.AddNormal(East);
+                    st.AddColor(white);
+                    st.AddVertex(vertices[(int)CellVertexIndex.Top_NE]);
+                    st.AddUv(new Vector2(1, 1));
+                    st.AddNormal(East);
+                    st.AddColor(white);
+                    st.AddVertex(vertices[(int)CellVertexIndex.Bot_NE]);
+                    st.AddUv(new Vector2(0, 1));
+                    st.AddNormal(East);
+                    st.AddColor(white);
+                    st.AddVertex(vertices[(int)CellVertexIndex.Bot_SE]);
                 }
 
                 if (sides.HasFlag(Sides.South))
                 {
-                    st.AddUv(new Vector2(1, 1));
-                    st.AddNormal(South);
-                    st.AddColor(white);
-                    st.AddVertex(vertices[(int)CellVertexIndex.Bot_SW]);
                     st.AddUv(new Vector2(0, 0));
-                    st.AddNormal(South);
-                    st.AddColor(white);
-                    st.AddVertex(vertices[(int)CellVertexIndex.Top_SE]);
-                    st.AddUv(new Vector2(1, 0));
                     st.AddNormal(South);
                     st.AddColor(white);
                     st.AddVertex(vertices[(int)CellVertexIndex.Top_SW]);
-
-                    st.AddUv(new Vector2(1, 1));
-                    st.AddNormal(South);
-                    st.AddColor(white);
-                    st.AddVertex(vertices[(int)CellVertexIndex.Bot_SW]);
-                    st.AddUv(new Vector2(0, 1));
-                    st.AddNormal(South);
-                    st.AddColor(white);
-                    st.AddVertex(vertices[(int)CellVertexIndex.Bot_SE]);
-                    st.AddUv(new Vector2(0, 0));
+                    st.AddUv(new Vector2(1, 0));
                     st.AddNormal(South);
                     st.AddColor(white);
                     st.AddVertex(vertices[(int)CellVertexIndex.Top_SE]);
+                    st.AddUv(new Vector2(0, 1));
+                    st.AddNormal(South);
+                    st.AddColor(white);
+                    st.AddVertex(vertices[(int)CellVertexIndex.Bot_SW]);
+
+                    st.AddUv(new Vector2(1, 0));
+                    st.AddNormal(South);
+                    st.AddColor(white);
+                    st.AddVertex(vertices[(int)CellVertexIndex.Top_SE]);
+                    st.AddUv(new Vector2(1, 1));
+                    st.AddNormal(South);
+                    st.AddColor(white);
+                    st.AddVertex(vertices[(int)CellVertexIndex.Bot_SE]);
+                    st.AddUv(new Vector2(0, 1));
+                    st.AddNormal(South);
+                    st.AddColor(white);
+                    st.AddVertex(vertices[(int)CellVertexIndex.Bot_SW]);
                 }
 
                 if (sides.HasFlag(Sides.West))
                 {
-                    st.AddUv(new Vector2(0, 0));
-                    st.AddNormal(West);
-                    st.AddColor(white);
-                    st.AddVertex(vertices[(int)CellVertexIndex.Top_SW]);
-                    st.AddUv(new Vector2(1, 0));
-                    st.AddNormal(West);
-                    st.AddColor(white);
-                    st.AddVertex(vertices[(int)CellVertexIndex.Top_NW]);
-                    st.AddUv(new Vector2(0, 1));
-                    st.AddNormal(West);
-                    st.AddColor(white);
-                    st.AddVertex(vertices[(int)CellVertexIndex.Bot_SW]);
-
-                    st.AddUv(new Vector2(1, 0));
-                    st.AddNormal(West);
-                    st.AddColor(white);
-                    st.AddVertex(vertices[(int)CellVertexIndex.Top_NW]);
                     st.AddUv(new Vector2(1, 1));
                     st.AddNormal(West);
                     st.AddColor(white);
-                    st.AddVertex(vertices[(int)CellVertexIndex.Bot_NW]);
-                    st.AddUv(new Vector2(0, 1));
+                    st.AddVertex(vertices[(int)CellVertexIndex.Bot_SW]);
+                    st.AddUv(new Vector2(0, 0));
+                    st.AddNormal(West);
+                    st.AddColor(white);
+                    st.AddVertex(vertices[(int)CellVertexIndex.Top_NW]);
+                    st.AddUv(new Vector2(1, 0));
+                    st.AddNormal(West);
+                    st.AddColor(white);
+                    st.AddVertex(vertices[(int)CellVertexIndex.Top_SW]);
+
+                    st.AddUv(new Vector2(1, 1));
                     st.AddNormal(West);
                     st.AddColor(white);
                     st.AddVertex(vertices[(int)CellVertexIndex.Bot_SW]);
+                    st.AddUv(new Vector2(0, 1));
+                    st.AddNormal(West);
+                    st.AddColor(white);
+                    st.AddVertex(vertices[(int)CellVertexIndex.Bot_NW]);
+                    st.AddUv(new Vector2(0, 0));
+                    st.AddNormal(West);
+                    st.AddColor(white);
+                    st.AddVertex(vertices[(int)CellVertexIndex.Top_NW]);
                 }
             }
         }

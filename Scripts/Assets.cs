@@ -25,6 +25,13 @@ namespace Wolf
 		private static Dictionary<int, AudioStreamSample> _vswapSound =
 			new Dictionary<int, AudioStreamSample>();
 
+		public enum DigitalSoundList : int
+		{
+			DoorOpening = 3,
+			DoorClosing = 4,
+			PushWallActivation = 15
+		}
+
 		public static Material GetTexture(int idx)
 		{
 			Material ret = _vswapTexture.ContainsKey(idx) ?
@@ -132,6 +139,11 @@ namespace Wolf
 			}
 
 			return ret;
+		}
+
+		public static AudioStreamSample GetSoundClip(DigitalSoundList sound)
+		{
+			return GetSoundClip((int)sound);
 		}
 
 		public static AudioStreamSample GetSoundClip(int idx)
