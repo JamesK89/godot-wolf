@@ -12,7 +12,8 @@ namespace Wolf
             Turn_Left = 1,
             Turn_Right = 2,
             Move_Forward = 4,
-            Move_Backward = 8
+            Move_Backward = 8,
+            Strafe = 16
         }
 
         protected InputMoveFlags InputFlags
@@ -77,6 +78,11 @@ namespace Wolf
                 InputFlags |= InputMoveFlags.Move_Backward;
             }
 
+            if (Input.IsActionPressed("strafe"))
+            {
+                InputFlags |= InputMoveFlags.Strafe;
+            }
+
             if (Input.IsActionPressed("turn_left"))
             {
                 InputFlags |= InputMoveFlags.Turn_Left;
@@ -86,18 +92,21 @@ namespace Wolf
                 InputFlags |= InputMoveFlags.Turn_Right;
             }
 
-            float yaw = 0.0f;
-
-            if (InputFlags.HasFlag(InputMoveFlags.Turn_Left))
+            if (!InputFlags.HasFlag(InputMoveFlags.Strafe))
             {
-                yaw = 1.0f;
-            }
-            else if (InputFlags.HasFlag(InputMoveFlags.Turn_Right))
-            {
-                yaw = -1.0f;
-            }
+                float yaw = 0.0f;
 
-            _camera.Transform = _camera.Transform.Rotated(Vector3.Up, yaw * _turnSpeed * delta);
+                if (InputFlags.HasFlag(InputMoveFlags.Turn_Left))
+                {
+                    yaw = 1.0f;
+                }
+                else if (InputFlags.HasFlag(InputMoveFlags.Turn_Right))
+                {
+                    yaw = -1.0f;
+                }
+
+                _camera.Transform = _camera.Transform.Rotated(Vector3.Up, yaw * _turnSpeed * delta);
+            }
         }
 
         protected virtual void ProcessUseRay(float delta)
@@ -122,6 +131,19 @@ namespace Wolf
             }
         }
 
+        public bool Pickup(Node what)
+        {
+            bool result = false;
+
+            if (what != null &&
+                what is PropPickup)
+            {
+                result = true;
+            }
+
+            return result;
+        }
+
         public override void _Process(float delta)
 		{
             InputFlags = InputMoveFlags.None;
@@ -143,6 +165,18 @@ namespace Wolf
             else if (InputFlags.HasFlag(InputMoveFlags.Move_Backward))
             {
                 DesiredVelocity = _camera.Transform.basis.z * _moveSpeed;
+            }
+
+            if (InputFlags.HasFlag(InputMoveFlags.Strafe))
+            {
+                if (InputFlags.HasFlag(InputMoveFlags.Turn_Left))
+                {
+                    DesiredVelocity += _camera.Transform.basis.x * _moveSpeed * -1f;
+                }
+                else if (InputFlags.HasFlag(InputMoveFlags.Turn_Right))
+                {
+                    DesiredVelocity += _camera.Transform.basis.x * _moveSpeed;
+                }
             }
 
             DesiredVelocity *= delta;

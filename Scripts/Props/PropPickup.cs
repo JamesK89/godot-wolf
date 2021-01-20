@@ -5,6 +5,12 @@ namespace Wolf
 {
 	public class PropPickup : PropBase
 	{
+		[Signal]
+		public delegate void PickedUp(Node who);
+
+		private CollisionShape _areaShape;
+		private Area _area;
+
 		private PropPickup()
 			: base(0, 0, null)
 		{
@@ -13,21 +19,42 @@ namespace Wolf
 		public PropPickup(int x, int y, Level level)
 			: base(x, y, level)
 		{
-			CollisionShape shape = new CollisionShape();
 			BoxShape box = new BoxShape();
 			box.Extents = new Vector3(Level.CellSize * 0.25f, Level.CellSize * 0.5f, Level.CellSize * 0.25f);
-			shape.Shape = box;
 
-			Area = new Area();
-			Area.AddChild(shape);
+			_areaShape = new CollisionShape();
+			_areaShape.Shape = box;
 
-			AddChild(Area);
+			_area = new Area();
+			_area.AddChild(_areaShape);
+
+			AddChild(_area);
+
+			_area.Connect("body_entered", this, "OnBodyEntered");
 		}
 
-		public Area Area
+		private void OnBodyEntered(Node node)
 		{
-			get;
-			protected set;
+			while (node != null)
+			{
+				if (node.HasMethod("Pickup"))
+				{
+					object result = node.Call("Pickup", new object[] { this });
+
+					if (result != null && 
+						Convert.ToBoolean(result))
+					{
+						_areaShape.Disabled = true;
+						Visible = false;
+
+						EmitSignal(nameof(PickedUp), new object[] { node });
+					}
+
+					break;
+				}
+
+				node = node.GetParent();
+			}
 		}
 	}
 }
