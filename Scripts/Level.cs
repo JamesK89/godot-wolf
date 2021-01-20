@@ -271,8 +271,8 @@ namespace Wolf
                     if (DoorFactory.CreateSlidingDoor(x, y, this) != null)
                         continue;
 
-                    //if (DoorFactory.CreateSecretDoor(x, y, this) != null)
-                    //    continue;
+                    if (DoorFactory.CreateSecretDoor(x, y, this) != null)
+                        continue;
 
                     if (PropFactory.CreateProp(x, y, this) != null)
                         continue;
@@ -308,12 +308,20 @@ namespace Wolf
                 CellSize * -0.5f,
                 CellSize * (float)Map.Height * -0.5f);
 
-            FloorBody = CreateCollisionPlane(plPos, Vector3.Up, 0f);
+            if (FloorBody == null)
+            {
+                FloorBody = CreateCollisionPlane(plPos, Vector3.Up, 0f);
+            }
+
             AddChild(FloorBody);
 
             plPos.y *= -1f;
 
-            CeilingBody = CreateCollisionPlane(plPos, Vector3.Down, 0f);
+            if (CeilingBody == null)
+            {
+                CeilingBody = CreateCollisionPlane(plPos, Vector3.Down, 0f);
+            }
+
             AddChild(CeilingBody);
         }
 
@@ -338,6 +346,13 @@ namespace Wolf
 
         public void BuildMeshFromCells()
         {
+            if (Mesh != null)
+            {
+                var msh = Mesh;
+                Mesh = null;
+                msh.Dispose();
+            }
+
             Dictionary<int, SurfaceTool> surfaces = new Dictionary<int, SurfaceTool>();
 
             for (int y = 0; y < Map.Height; y++)
@@ -410,6 +425,7 @@ namespace Wolf
             foreach (var kvp in surfaces)
             {
                 kvp.Value.Commit(mesh);
+                kvp.Value.Dispose();
             }
 
             Mesh = mesh;

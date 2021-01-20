@@ -409,73 +409,75 @@ namespace Wolf
             {
                 Color white = new Color(1f, 1f, 1f, 1f);
 
-                SurfaceTool st = new SurfaceTool();
+                using (SurfaceTool st = new SurfaceTool())
+                {
 
-                Vector3[] cellVerts = Level.GetVerticesForCell();
+                    Vector3[] cellVerts = Level.GetVerticesForCell();
 
-                Vector3[] verts = new Vector3[] {
-                    Lerp(cellVerts[(int)Level.CellVertexIndex.Top_SW], cellVerts[(int)Level.CellVertexIndex.Top_NW], 0.5f),
-                    Lerp(cellVerts[(int)Level.CellVertexIndex.Top_SE], cellVerts[(int)Level.CellVertexIndex.Top_NE], 0.5f),
-                    Lerp(cellVerts[(int)Level.CellVertexIndex.Bot_SW], cellVerts[(int)Level.CellVertexIndex.Bot_NW], 0.5f),
-                    Lerp(cellVerts[(int)Level.CellVertexIndex.Bot_SE], cellVerts[(int)Level.CellVertexIndex.Bot_NE], 0.5f)
-                };
+                    Vector3[] verts = new Vector3[] {
+                        Lerp(cellVerts[(int)Level.CellVertexIndex.Top_SW], cellVerts[(int)Level.CellVertexIndex.Top_NW], 0.5f),
+                        Lerp(cellVerts[(int)Level.CellVertexIndex.Top_SE], cellVerts[(int)Level.CellVertexIndex.Top_NE], 0.5f),
+                        Lerp(cellVerts[(int)Level.CellVertexIndex.Bot_SW], cellVerts[(int)Level.CellVertexIndex.Bot_NW], 0.5f),
+                        Lerp(cellVerts[(int)Level.CellVertexIndex.Bot_SE], cellVerts[(int)Level.CellVertexIndex.Bot_NE], 0.5f)
+                    };
 
-                st.Begin(Godot.Mesh.PrimitiveType.Triangles);
+                    st.Begin(Godot.Mesh.PrimitiveType.Triangles);
 
-                st.AddUv(new Vector2(0f, 1f));
-                st.AddColor(white);
-                st.AddNormal(Level.South);
-                st.AddVertex(verts[3]);
-                st.AddUv(new Vector2(0f, 0f));
-                st.AddColor(white);
-                st.AddNormal(Level.South);
-                st.AddVertex(verts[1]);
-                st.AddUv(new Vector2(1f, 0f));
-                st.AddColor(white);
-                st.AddNormal(Level.South);
-                st.AddVertex(verts[0]);
+                    st.AddUv(new Vector2(0f, 1f));
+                    st.AddColor(white);
+                    st.AddNormal(Level.South);
+                    st.AddVertex(verts[3]);
+                    st.AddUv(new Vector2(0f, 0f));
+                    st.AddColor(white);
+                    st.AddNormal(Level.South);
+                    st.AddVertex(verts[1]);
+                    st.AddUv(new Vector2(1f, 0f));
+                    st.AddColor(white);
+                    st.AddNormal(Level.South);
+                    st.AddVertex(verts[0]);
 
-                st.AddUv(new Vector2(1f, 1f));
-                st.AddColor(white);
-                st.AddNormal(Level.South);
-                st.AddVertex(verts[2]);
-                st.AddUv(new Vector2(0f, 1f));
-                st.AddColor(white);
-                st.AddNormal(Level.South);
-                st.AddVertex(verts[3]);
-                st.AddUv(new Vector2(1f, 0f));
-                st.AddColor(white);
-                st.AddNormal(Level.South);
-                st.AddVertex(verts[0]);
+                    st.AddUv(new Vector2(1f, 1f));
+                    st.AddColor(white);
+                    st.AddNormal(Level.South);
+                    st.AddVertex(verts[2]);
+                    st.AddUv(new Vector2(0f, 1f));
+                    st.AddColor(white);
+                    st.AddNormal(Level.South);
+                    st.AddVertex(verts[3]);
+                    st.AddUv(new Vector2(1f, 0f));
+                    st.AddColor(white);
+                    st.AddNormal(Level.South);
+                    st.AddVertex(verts[0]);
 
 
-                st.AddUv(new Vector2(1f, 0f));
-                st.AddColor(white);
-                st.AddNormal(Level.North);
-                st.AddVertex(verts[0]);
-                st.AddUv(new Vector2(0f, 0f));
-                st.AddColor(white);
-                st.AddNormal(Level.North);
-                st.AddVertex(verts[1]);
-                st.AddUv(new Vector2(0f, 1f));
-                st.AddColor(white);
-                st.AddNormal(Level.North);
-                st.AddVertex(verts[3]);
+                    st.AddUv(new Vector2(1f, 0f));
+                    st.AddColor(white);
+                    st.AddNormal(Level.North);
+                    st.AddVertex(verts[0]);
+                    st.AddUv(new Vector2(0f, 0f));
+                    st.AddColor(white);
+                    st.AddNormal(Level.North);
+                    st.AddVertex(verts[1]);
+                    st.AddUv(new Vector2(0f, 1f));
+                    st.AddColor(white);
+                    st.AddNormal(Level.North);
+                    st.AddVertex(verts[3]);
 
-                st.AddUv(new Vector2(1f, 0f));
-                st.AddColor(white);
-                st.AddNormal(Level.North);
-                st.AddVertex(verts[0]);
-                st.AddUv(new Vector2(0f, 1f));
-                st.AddColor(white);
-                st.AddNormal(Level.North);
-                st.AddVertex(verts[3]);
-                st.AddUv(new Vector2(1f, 1f));
-                st.AddColor(white);
-                st.AddNormal(Level.North);
-                st.AddVertex(verts[2]);
+                    st.AddUv(new Vector2(1f, 0f));
+                    st.AddColor(white);
+                    st.AddNormal(Level.North);
+                    st.AddVertex(verts[0]);
+                    st.AddUv(new Vector2(0f, 1f));
+                    st.AddColor(white);
+                    st.AddNormal(Level.North);
+                    st.AddVertex(verts[3]);
+                    st.AddUv(new Vector2(1f, 1f));
+                    st.AddColor(white);
+                    st.AddNormal(Level.North);
+                    st.AddVertex(verts[2]);
 
-                _doorMesh = st.Commit();
+                    _doorMesh = st.Commit();
+                }
             }
         }
 

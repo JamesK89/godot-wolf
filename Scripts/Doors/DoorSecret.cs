@@ -19,6 +19,16 @@ namespace Wolf
 
         private Tween _tween;
 
+        private MeshInstance _mesh;
+
+        private float _moveDuration = 3.0f;
+
+        private CollisionShape _wallShape;
+        private RigidBody _wallBody;
+
+        private AudioStreamPlayer3D _audioPlayer;
+        private AudioStream _activateSound;
+
         private DoorSecret()
         {
         }
@@ -30,47 +40,57 @@ namespace Wolf
             
             Type = level.Map.Planes[(int)Level.Planes.Walls][y, x];
 
-            Mesh = new MeshInstance();
-            Mesh.Mesh = GetMeshForDoor(Type);
+            // This will be the physical body for the door itself.
 
-            AddChild(Mesh);
-            
-            CollisionShape shape = new CollisionShape();
             BoxShape box = new BoxShape();
             box.Extents = new Vector3(Level.CellSize * 0.5f, Level.CellSize * 0.5f, Level.CellSize * 0.5f);
 
-            shape.Shape = box;
-            shape.Name = "CollisionShape";
+            _wallShape = new CollisionShape();
+            _wallShape.Shape = box;
 
-            Body = new RigidBody();
-            Body.Mode = RigidBody.ModeEnum.Static;
-            Body.CollisionLayer = (uint)Level.CollisionLayers.Walls;
-            Body.CollisionMask = (uint)(Level.CollisionLayers.Characters);
-            Body.AddChild(shape);
+            _wallBody = new RigidBody();
+            _wallBody.Mode = RigidBody.ModeEnum.Static;
+            _wallBody.CollisionLayer = (uint)Level.CollisionLayers.Walls;
+            _wallBody.CollisionMask = (uint)(Level.CollisionLayers.Characters | Level.CollisionLayers.Projectiles);
+            _wallBody.AddChild(_wallShape);
 
-            AddChild(Body);
+            AddChild(_wallBody);
+
+            // Create the actual mesh for the door
+
+            _mesh = new MeshInstance();
+            _mesh.Mesh = GetMeshForDoor(Type);
+
+            _wallBody.AddChild(_mesh);
+
+            // Add an audio player to play the "pushing" sound when the door
+            // is activated.
+
+            _audioPlayer = new AudioStreamPlayer3D();
+
+            _wallBody.AddChild(_audioPlayer);
+
+            _activateSound = Assets.GetSoundClip(Assets.DigitalSoundList.PushWallActivation);
             
-            AudioStreamPlayer3D audioPlayer = new AudioStreamPlayer3D();
-            audioPlayer.Name = "AudioPlayer";
+            // Add the tween that will be used to animate the door.
 
-            AddChild(audioPlayer);
-
-            ActivateSound = Assets.GetSoundClip(Assets.DigitalSoundList.PushWallActivation);
-            
             _tween = new Tween();
             _tween.Connect("tween_all_completed", this, "OnTweenCompleted");
 
             AddChild(_tween);
 
+            // Add myself to the world and set my position.
+
             level.AddChild(this);
 
             Transform tform = this.Transform;
-
             tform.origin = level.MapToWorld(x, y);
-
             this.Transform = tform;
 
+            // Set my default state.
+
             State = DoorState.Stopped;
+            Enabled = true;
             
             SetProcess(true);
             SetPhysicsProcess(true);
@@ -82,28 +102,16 @@ namespace Wolf
             protected set;
         }
 
+        public bool Enabled
+        {
+            get;
+            protected set;
+        }
+
         public int Type
         {
             get;
             protected set;
-        }
-
-        public RigidBody Body
-        {
-            get;
-            protected set;
-        }
-
-        public MeshInstance Mesh
-        {
-            get;
-            protected set;
-        }
-
-        public AudioStream ActivateSound
-        {
-            get;
-            set;
         }
 
         public Level Level
@@ -122,7 +130,8 @@ namespace Wolf
         {
             bool result = false;
             
-            if (State == DoorState.Stopped &&
+            if (Enabled &&
+                State == DoorState.Stopped &&
                 user != null &&
                 user is Spatial)
             {
@@ -133,10 +142,10 @@ namespace Wolf
 
                 (int x, int y, Vector3 dir)[] dirs = new (int, int, Vector3)[]
                 {
-                    (myMapPos.x - 1, myMapPos.y, Level.South),
-                    (myMapPos.x + 1, myMapPos.y, Level.North),
-                    (myMapPos.x, myMapPos.y - 1, Level.East),
-                    (myMapPos.x, myMapPos.y + 1, Level.West)
+                    (myMapPos.x - 1, myMapPos.y, Level.East),
+                    (myMapPos.x + 1, myMapPos.y, Level.West),
+                    (myMapPos.x, myMapPos.y - 1, Level.South),
+                    (myMapPos.x, myMapPos.y + 1, Level.North)
                 };
 
                 foreach (var dir in dirs)
@@ -144,13 +153,15 @@ namespace Wolf
                     if (userMapPos.x == dir.x &&
                         userMapPos.y == dir.y)
                     {
-                        AudioStreamPlayer3D audioPlayer = GetNode<AudioStreamPlayer3D>("AudioPlayer");
-                        audioPlayer.Stream = ActivateSound;
-                        audioPlayer.Seek(0.0f);
-                        audioPlayer.Play();
+                        State = DoorState.Moving;
+                        Enabled = false;
+
+                        _audioPlayer.Stream = _activateSound;
+                        _audioPlayer.Seek(0.0f);
+                        _audioPlayer.Play();
 
                         _tween.PlaybackProcessMode = Tween.TweenProcessMode.Physics;
-                        _tween.InterpolateProperty(Mesh, "translation", Vector3.Zero, dir.dir * Level.CellSize * 2f, 1.0f, Tween.TransitionType.Linear, Tween.EaseType.InOut);
+                        _tween.InterpolateProperty(_wallBody, "translation", Vector3.Zero, dir.dir * Level.CellSize * 2f, _moveDuration, Tween.TransitionType.Linear, Tween.EaseType.InOut);
                         _tween.ResetAll();
                         _tween.Start();
 
@@ -165,6 +176,13 @@ namespace Wolf
         private void OnTweenCompleted()
         {
             State = DoorState.Stopped;
+
+            var tform = Transform;
+            tform.origin = _wallBody.GlobalTransform.origin;
+
+            _wallBody.Translation = Vector3.Zero;
+
+            Transform = tform;
         }
         
         public override void _Process(float delta)
@@ -186,17 +204,18 @@ namespace Wolf
             {
                 result = new ArrayMesh();
 
-                SurfaceTool st = new SurfaceTool();
+                using (SurfaceTool st = new SurfaceTool())
+                {
+                    st.Begin(Godot.Mesh.PrimitiveType.Triangles);
+                    st.SetMaterial(Assets.GetTexture((id - 1) << 1));
+                    Level.CreateCube(st, Level.CellSize, Vector3.Zero, Level.Sides.North_South);
+                    st.Commit(result);
 
-                st.Begin(Godot.Mesh.PrimitiveType.Triangles);
-                //st.SetMaterial(Assets.GetTexture(((id - 1) << 1) + 1));
-                Level.CreateCube(st, Level.CellSize, Vector3.Zero, Level.Sides.North_South);
-                st.Commit(result);
-
-                st.Begin(Godot.Mesh.PrimitiveType.Triangles);
-                //st.SetMaterial(Assets.GetTexture((id - 1) << 1));
-                Level.CreateCube(st, Level.CellSize, Vector3.Zero, Level.Sides.East_West);
-                st.Commit(result);
+                    st.Begin(Godot.Mesh.PrimitiveType.Triangles);
+                    st.SetMaterial(Assets.GetTexture(((id - 1) << 1) + 1));
+                    Level.CreateCube(st, Level.CellSize, Vector3.Zero, Level.Sides.East_West);
+                    st.Commit(result);
+                }
 
                 _meshes.Add(id, result);
             }

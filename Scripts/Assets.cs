@@ -28,7 +28,7 @@ namespace Wolf
 		public enum DigitalSoundList : int
 		{
 			DoorOpening = 3,
-			DoorClosing = 4,
+			DoorClosing = 2,
 			PushWallActivation = 15
 		}
 
