@@ -202,6 +202,18 @@ namespace Wolf
                     if (mapValue >= MapWallBegin && mapValue <= MapWallEnd 
                         && mapValue_pl1 != DoorSecret.DoorSecretId)
                     {
+                        if ((y - 1) > -1)
+                        {
+                            int neighbor = map.Planes[0].Data[y - 1, x];
+                            int neighbor_pl1 = map.Planes[1].Data[y - 1, x];
+
+                            if (neighbor < MapWallBegin || neighbor > MapWallEnd ||
+                                neighbor_pl1 == DoorSecret.DoorSecretId)
+                            {
+                                cube.North = (mapValue - 1) << 1;
+                            }
+                        }
+
                         if ((x + 1) < map.Width)
                         {
                             int neighbor = map.Planes[0].Data[y, x + 1];
@@ -210,7 +222,19 @@ namespace Wolf
                             if (neighbor < MapWallBegin || neighbor > MapWallEnd || 
                                 neighbor_pl1 == DoorSecret.DoorSecretId)
                             {
-                                cube.East = (mapValue - 1) << 1;
+                                cube.East = ((mapValue - 1) << 1) + 1;
+                            }
+                        }
+
+                        if ((y + 1) < map.Height)
+                        {
+                            int neighbor = map.Planes[0].Data[y + 1, x];
+                            int neighbor_pl1 = map.Planes[1].Data[y + 1, x];
+
+                            if (neighbor < MapWallBegin || neighbor > MapWallEnd ||
+                                neighbor_pl1 == DoorSecret.DoorSecretId)
+                            {
+                                cube.South = (mapValue - 1) << 1;
                             }
                         }
 
@@ -222,31 +246,7 @@ namespace Wolf
                             if (neighbor < MapWallBegin || neighbor > MapWallEnd || 
                                 neighbor_pl1 == DoorSecret.DoorSecretId)
                             {
-                                cube.West = (mapValue - 1) << 1;
-                            }
-                        }
-
-                        if ((y + 1) < map.Height)
-                        {
-                            int neighbor = map.Planes[0].Data[y + 1, x];
-                            int neighbor_pl1 = map.Planes[1].Data[y + 1, x];
-
-                            if (neighbor < MapWallBegin || neighbor > MapWallEnd || 
-                                neighbor_pl1 == DoorSecret.DoorSecretId)
-                            {
-                                cube.South = ((mapValue - 1) << 1) + 1;
-                            }
-                        }
-
-                        if ((y - 1) > -1)
-                        {
-                            int neighbor = map.Planes[0].Data[y - 1, x];
-                            int neighbor_pl1 = map.Planes[1].Data[y - 1, x];
-
-                            if (neighbor < MapWallBegin || neighbor > MapWallEnd || 
-                                neighbor_pl1 == DoorSecret.DoorSecretId)
-                            {
-                                cube.North = ((mapValue - 1) << 1) + 1;
+                                cube.West = ((mapValue - 1) << 1) + 1;
                             }
                         }
                     }

@@ -6,8 +6,8 @@ namespace Wolf
 {
     public class DoorSliding : Spatial
     {
-        public const int DoorWestEastWall = 100;
-        public const int DoorNorthSouthWall = 101;
+        public const int DoorWestEastWall = 101;
+        public const int DoorNorthSouthWall = 100;
 
         public const float StayOpenTime = 5.0f;
 
