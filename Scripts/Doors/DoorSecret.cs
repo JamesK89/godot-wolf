@@ -13,8 +13,6 @@ namespace Wolf
 
         public const int DoorSecretId = 98;
 
-        public const int DefaultMoveDistance = 2;
-
         public enum DoorState : int
         {
             Stopped = 0,
@@ -26,6 +24,9 @@ namespace Wolf
         private MeshInstance _mesh;
 
         private float _moveDuration = 3.0f;
+
+        private Direction _moveDir;
+        private int _moveDist;
 
         private CollisionShape _wallShape;
         private RigidBody _wallBody;
@@ -67,7 +68,7 @@ namespace Wolf
                 _mesh = new MeshInstance();
                 _mesh.Mesh = GetMeshForDoor(Type);
 
-                _wallBody.AddChild(_mesh);
+                //_wallBody.AddChild(_mesh);
 
                 // Add an audio player to play the "pushing" sound when the door
                 // is activated.
@@ -97,6 +98,9 @@ namespace Wolf
 
                 State = DoorState.Stopped;
                 Enabled = true;
+
+                _moveDir = Direction.North;
+                _moveDist = 0;
 
                 SetProcess(true);
                 SetPhysicsProcess(true);
@@ -136,7 +140,7 @@ namespace Wolf
         public bool Use(Node user)
         {
             bool result = false;
-            
+
             if (Enabled &&
                 State == DoorState.Stopped &&
                 user != null &&
@@ -147,7 +151,7 @@ namespace Wolf
                 var userMapPos = Level.WorldToMap((user as Spatial).Translation);
                 var myMapPos = Level.WorldToMap(Translation);
 
-                (int x, int y, Direction d)[] dirs = new (int, int, Direction)[]
+                (int x, int y, Direction dir)[] dirs = new (int, int, Direction)[]
                 {
                     (myMapPos.x - 1, myMapPos.y, Direction.East),
                     (myMapPos.x + 1, myMapPos.y, Direction.West),
@@ -160,75 +164,8 @@ namespace Wolf
                     if (userMapPos.x == dir.x &&
                         userMapPos.y == dir.y)
                     {
-                        // I hadn't originally done any checks since the majority of push walls in the game
-                        // can only be pushed from one direction but I found an edge case in Floor 4 of Episode 1
-                        // where a player could push a secret door from two different angles potentially allowing
-                        // them to push the secret door into the inside of a neighboring wall.
-
-                        // Originally I was going to use a physics query to determine if the entire volume
-                        // of the block's movement was free of obstructions but I was having problems with
-                        // it reporting all sorts of contacts with neighboring walls.
-                        // Instead of messing with that further I decided to just query the world map
-                        // to see if the neighboring cells are free of walls and to determine how far
-                        // the block can move in a given direction. If this were a multiplayer game
-                        // I'd probably spend more time on the physics approach but since this is
-                        // a single player game and secret areas only contain pickups this should work fine.
-
-                        int moveDist = 0;
-
-                        for (int i = 0; i < DefaultMoveDistance; i++)
-                        {
-                            moveDist++;
-
-                            Point2 movePos = myMapPos;
-
-                            switch (dir.d)
-                            {
-                                case Direction.North:
-                                    movePos.y -= moveDist;
-                                    break;
-                                case Direction.East:
-                                    movePos.x += moveDist;
-                                    break;
-                                case Direction.South:
-                                    movePos.y += moveDist;
-                                    break;
-                                case Direction.West:
-                                    movePos.x -= moveDist;
-                                    break;
-                            }
-
-                            bool moveValid =
-                                movePos.x > -1 &&
-                                movePos.y > -1 &&
-                                movePos.x < Level.Map.Width &&
-                                movePos.y < Level.Map.Height &&
-                                !Level.IsWall(movePos.x, movePos.y);
-
-                            if (!moveValid)
-                            {
-                                moveDist--;
-                                break;
-                            }
-                        }
-
-                        if (moveDist > 0)
-                        {
-                            State = DoorState.Moving;
-                            Enabled = false;
-
-                            _audioPlayer.Stream = _activateSound;
-                            _audioPlayer.Seek(0.0f);
-                            _audioPlayer.Play();
-
-                            _tween.PlaybackProcessMode = Tween.TweenProcessMode.Physics;
-                            _tween.InterpolateProperty(_wallBody, "translation",
-                                Vector3.Zero, Level.DirectionVectors[(int)dir.d] * Level.CellSize * (float)moveDist,
-                                _moveDuration, Tween.TransitionType.Linear, Tween.EaseType.InOut);
-                            _tween.ResetAll();
-                            _tween.Start();
-                        }
-
+                        _moveDir = dir.dir;
+                        _moveDist = 2;
                         break;
                     }
                 }
@@ -248,18 +185,78 @@ namespace Wolf
 
             Transform = tform;
         }
-        
+
         public override void _Process(float delta)
-		{
-			base._Process(delta);
-		}
+        {
+            base._Process(delta);
+        }
 
-		public override void _PhysicsProcess(float delta)
-		{
-			base._PhysicsProcess(delta);
-		}
+        public override void _PhysicsProcess(float delta)
+        {
+            if (_moveDist > 0)
+            {
+                Vector3 dir = Level.DirectionVectors[(int)_moveDir];
 
-		public static ArrayMesh GetMeshForDoor(int id)
+                var space = _wallBody.GetWorld().DirectSpaceState;
+
+                using (var query = new PhysicsShapeQueryParameters())
+                {
+                    using (BoxShape box = new BoxShape())
+                    {
+                        while (_moveDist > 0)
+                        {
+                            float lg_extent = (Level.CellSize * (float)_moveDist * 0.5f);
+                            float st_extent = (Level.CellSize * 0.5f);
+
+                            box.Extents = new Vector3(
+                                _moveDir == Direction.West || _moveDir == Direction.East ?
+                                lg_extent : st_extent,
+                                st_extent,
+                                _moveDir == Direction.North || _moveDir == Direction.South ?
+                                lg_extent : st_extent);
+
+                            Transform tform = this.GlobalTransform;
+                            tform.origin += (dir * ((Level.CellSize * 0.5f) + (Level.CellSize * (float)_moveDist * 0.5f)));
+
+                            query.SetShape(box);
+                            query.CollisionMask = (int)(Level.CollisionLayers.Characters | Level.CollisionLayers.Walls);
+                            query.CollideWithBodies = true;
+                            query.CollideWithAreas = false;
+                            query.Exclude.Add(_wallBody);
+                            query.Transform = tform;
+
+                            using (var results = space.IntersectShape(query))
+                            {
+                                if (results == null || results.Count < 1)
+                                {
+                                    State = DoorState.Moving;
+                                    Enabled = false;
+
+                                    _audioPlayer.Stream = _activateSound;
+                                    _audioPlayer.Seek(0.0f);
+                                    _audioPlayer.Play();
+
+                                    _tween.PlaybackProcessMode = Tween.TweenProcessMode.Physics;
+                                    _tween.InterpolateProperty(_wallBody, "translation", Vector3.Zero, dir * Level.CellSize * (float)_moveDist, _moveDuration, Tween.TransitionType.Linear, Tween.EaseType.InOut);
+                                    _tween.ResetAll();
+                                    _tween.Start();
+
+                                    _moveDist = 0;
+
+                                    break;
+                                }
+                            }
+
+                            _moveDist -= 1;
+                        }
+                    }
+                }
+            }
+
+            base._PhysicsProcess(delta);
+        }
+
+        public static ArrayMesh GetMeshForDoor(int id)
         {
             ArrayMesh result = _meshes.ContainsKey(id) ?
                 _meshes[id] : null;
