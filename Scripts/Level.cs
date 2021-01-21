@@ -333,8 +333,7 @@ namespace Wolf
             {
                 if (child is DoorSliding || 
                     child is DoorSecret ||
-                    child is PropBase || 
-                    child is StaticBody ||
+                    child is PropBase ||
                     child is CharacterBase)
                 {
                     RemoveChild(child);
