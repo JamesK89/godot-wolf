@@ -23,15 +23,32 @@ namespace Wolf
         public static Vector3 West = new Vector3(-1, 0, 0);
         public static Vector3 East = new Vector3(1, 0, 0);
 
+        public enum Direction : int
+        {
+            North = 0,
+            East,
+            South,
+            West
+        }
+
+        public static Vector3[] DirectionVectors = {
+            North,
+            East,
+            South,
+            West
+        };
+
         [Flags]
         public enum CollisionLayers : uint
         {
             None = 0,
-            Walls = 1,
-            Doors = 2,
-            Static = 4,
-            Characters = 8,
-            Projectiles = 16
+            Floor = 1,
+            Walls = 2,
+            Doors = 4,
+            Static = 8,
+            Characters = 16,
+            Pickups = 32,
+            Projectiles = 64
         }
 
         public enum CellVertexIndex : int
@@ -122,6 +139,12 @@ namespace Wolf
             private set;
         }
 
+        public StaticBody WorldBody
+        {
+            get;
+            private set;
+        }
+
         public StaticBody FloorBody
         {
             get;
@@ -140,6 +163,25 @@ namespace Wolf
             private set;
         }
 
+        public bool IsWall(int x, int y)
+        {
+            bool result = false;
+
+            if (x > -1 && y > -1 &&
+                x < Map.Width &&
+                y < Map.Height)
+            {
+                int pl0 = Map.Planes[(int)Planes.Walls][y, x];
+                int pl1 = Map.Planes[(int)Planes.Objects][y, x];
+
+                result = (pl0 >= MapWallBegin &&
+                    pl0 <= MapWallEnd &&
+                    pl1 != DoorSecret.DoorSecretId);
+            }
+
+            return result;
+        }
+
         public Vector3 MapToWorld(int x, int y)
         {
             return new Vector3(
@@ -148,9 +190,9 @@ namespace Wolf
                     ((float)y * Level.CellSize) + (Level.CellSize * 0.5f));
         }
 
-        public (int x, int y) WorldToMap(Vector3 pos)
+        public Point2 WorldToMap(Vector3 pos)
         {
-            return ((int)(pos.x / Level.CellSize), (int)(pos.z / Level.CellSize));
+            return new Point2((int)(pos.x / Level.CellSize), (int)(pos.z / Level.CellSize));
         }
 
         // Called when the node enters the scene tree for the first time.
@@ -300,6 +342,12 @@ namespace Wolf
                 }
             }
 
+            if (WorldBody != null)
+            {
+                RemoveChild(WorldBody);
+                WorldBody.QueueFree();
+            }
+
             LoadMap(index);
             BuildMeshFromCells();
             
@@ -311,18 +359,16 @@ namespace Wolf
             if (FloorBody == null)
             {
                 FloorBody = CreateCollisionPlane(plPos, Vector3.Up, 0f);
+                AddChild(FloorBody);
             }
-
-            AddChild(FloorBody);
 
             plPos.y *= -1f;
 
             if (CeilingBody == null)
             {
                 CeilingBody = CreateCollisionPlane(plPos, Vector3.Down, 0f);
+                AddChild(CeilingBody);
             }
-
-            AddChild(CeilingBody);
         }
 
         private StaticBody CreateCollisionPlane(Vector3 position, Vector3 normal, float d)
@@ -336,7 +382,8 @@ namespace Wolf
 
             Transform tform = Transform.Identity;
             tform.origin = position;
-
+            
+            body.CollisionLayer = (int)CollisionLayers.Floor;
             body.Transform = tform;
 
             body.AddChild(colShape);
@@ -431,6 +478,9 @@ namespace Wolf
             Mesh = mesh;
 
             CreateTrimeshCollision();
+
+            WorldBody = GetNode<StaticBody>($"{nameof(Level)}_col");
+            WorldBody.CollisionLayer = (int)CollisionLayers.Walls;
         }
 
         public static Vector3[] GetVerticesForCell()

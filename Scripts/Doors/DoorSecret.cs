@@ -2,6 +2,8 @@ using Godot;
 using System;
 using System.Collections.Generic;
 
+using Direction = Wolf.Level.Direction;
+
 namespace Wolf
 {
     public class DoorSecret : Spatial
@@ -10,6 +12,8 @@ namespace Wolf
             new Dictionary<int, ArrayMesh>();
 
         public const int DoorSecretId = 98;
+
+        public const int DefaultMoveDistance = 2;
 
         public enum DoorState : int
         {
@@ -143,12 +147,12 @@ namespace Wolf
                 var userMapPos = Level.WorldToMap((user as Spatial).Translation);
                 var myMapPos = Level.WorldToMap(Translation);
 
-                (int x, int y, Vector3 dir)[] dirs = new (int, int, Vector3)[]
+                (int x, int y, Direction d)[] dirs = new (int, int, Direction)[]
                 {
-                    (myMapPos.x - 1, myMapPos.y, Level.East),
-                    (myMapPos.x + 1, myMapPos.y, Level.West),
-                    (myMapPos.x, myMapPos.y - 1, Level.South),
-                    (myMapPos.x, myMapPos.y + 1, Level.North)
+                    (myMapPos.x - 1, myMapPos.y, Direction.East),
+                    (myMapPos.x + 1, myMapPos.y, Direction.West),
+                    (myMapPos.x, myMapPos.y - 1, Direction.South),
+                    (myMapPos.x, myMapPos.y + 1, Direction.North)
                 };
 
                 foreach (var dir in dirs)
@@ -156,17 +160,74 @@ namespace Wolf
                     if (userMapPos.x == dir.x &&
                         userMapPos.y == dir.y)
                     {
-                        State = DoorState.Moving;
-                        Enabled = false;
+                        // I hadn't originally done any checks since the majority of push walls in the game
+                        // can only be pushed from one direction but I found an edge case in Floor 4 of Episode 1
+                        // where a player could push a secret door from two different angles potentially allowing
+                        // them to push the secret door into the inside of a neighboring wall.
 
-                        _audioPlayer.Stream = _activateSound;
-                        _audioPlayer.Seek(0.0f);
-                        _audioPlayer.Play();
+                        // Originally I was going to use a physics query to determine if the entire volume
+                        // of the block's movement was free of obstructions but I was having problems with
+                        // it reporting all sorts of contacts with neighboring walls.
+                        // Instead of messing with that further I decided to just query the world map
+                        // to see if the neighboring cells are free of walls and to determine how far
+                        // the block can move in a given direction. If this were a multiplayer game
+                        // I'd probably spend more time on the physics approach but since this is
+                        // a single player game and secret areas only contain pickups this should work fine.
 
-                        _tween.PlaybackProcessMode = Tween.TweenProcessMode.Physics;
-                        _tween.InterpolateProperty(_wallBody, "translation", Vector3.Zero, dir.dir * Level.CellSize * 2f, _moveDuration, Tween.TransitionType.Linear, Tween.EaseType.InOut);
-                        _tween.ResetAll();
-                        _tween.Start();
+                        int moveDist = 0;
+
+                        for (int i = 0; i < DefaultMoveDistance; i++)
+                        {
+                            moveDist++;
+
+                            Point2 movePos = myMapPos;
+
+                            switch (dir.d)
+                            {
+                                case Direction.North:
+                                    movePos.y -= moveDist;
+                                    break;
+                                case Direction.East:
+                                    movePos.x += moveDist;
+                                    break;
+                                case Direction.South:
+                                    movePos.y += moveDist;
+                                    break;
+                                case Direction.West:
+                                    movePos.x -= moveDist;
+                                    break;
+                            }
+
+                            bool moveValid =
+                                movePos.x > -1 &&
+                                movePos.y > -1 &&
+                                movePos.x < Level.Map.Width &&
+                                movePos.y < Level.Map.Height &&
+                                !Level.IsWall(movePos.x, movePos.y);
+
+                            if (!moveValid)
+                            {
+                                moveDist--;
+                                break;
+                            }
+                        }
+
+                        if (moveDist > 0)
+                        {
+                            State = DoorState.Moving;
+                            Enabled = false;
+
+                            _audioPlayer.Stream = _activateSound;
+                            _audioPlayer.Seek(0.0f);
+                            _audioPlayer.Play();
+
+                            _tween.PlaybackProcessMode = Tween.TweenProcessMode.Physics;
+                            _tween.InterpolateProperty(_wallBody, "translation",
+                                Vector3.Zero, Level.DirectionVectors[(int)dir.d] * Level.CellSize * (float)moveDist,
+                                _moveDuration, Tween.TransitionType.Linear, Tween.EaseType.InOut);
+                            _tween.ResetAll();
+                            _tween.Start();
+                        }
 
                         break;
                     }

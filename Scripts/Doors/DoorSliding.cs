@@ -390,17 +390,20 @@ namespace Wolf
             if (State == DoorState.Opened)
             {
                 var space =  _cellBody.GetWorld().DirectSpaceState;
-                var query = new PhysicsShapeQueryParameters();
-                
-                query.SetShape(_cellShape.Shape);
-                query.CollisionMask = (int)Level.CollisionLayers.Characters;
-                query.CollideWithBodies = true;
-                query.CollideWithAreas = false;
-                query.Transform = _cellShape.GlobalTransform;
 
-                var results = space.IntersectShape(query);
-                
-                _canClose = (results == null || results.Count < 1);
+                using (var query = new PhysicsShapeQueryParameters())
+                {
+                    query.SetShape(_cellShape.Shape);
+                    query.CollisionMask = (int)Level.CollisionLayers.Characters;
+                    query.CollideWithBodies = true;
+                    query.CollideWithAreas = false;
+                    query.Transform = _cellShape.GlobalTransform;
+
+                    using (var results = space.IntersectShape(query))
+                    {
+                        _canClose = (results == null || results.Count < 1);
+                    }
+                }
             }
 
             base._PhysicsProcess(delta);

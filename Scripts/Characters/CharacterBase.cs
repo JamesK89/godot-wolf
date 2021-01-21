@@ -50,6 +50,8 @@ namespace Wolf
                     Level.CollisionLayers.Static |
                     Level.CollisionLayers.Doors |
                     Level.CollisionLayers.Walls |
+                    Level.CollisionLayers.Floor |
+                    Level.CollisionLayers.Pickups |
                     Level.CollisionLayers.Projectiles);
 
                 Level.AddChild(this);

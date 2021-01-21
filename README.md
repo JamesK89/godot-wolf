@@ -9,9 +9,13 @@ This is also a learning project for me in regard to the Godot engine.
 Contributions are welcome!
 
 Some things that are needed in no particular order:
-* There is not yet audio nor any support for loading audio in the wolfread library.
-* Secret doors (aka Push blocks) are not implemented yet.
-* Pickups are non-functional at the moment.
+* Digitized sound effects are available but some of them have a "beep" on the end. (Please look at the VSWAP.cs wolfread library and see if you can figure it out. I'm probably determining the chunk length wrong.)
+* Adlib sound effects are absent which are basically short MIDI sequences. It'll need to be figured out how to synthesize those into digital samples for playback in Godot.
+* There is no music. Again, we'll need to figure out how to synthesize those into digital samples for playback in Godot.
+* The Level class is used as a place holder for a lot of enumerations, so some refactoring needs to be done.
+* Some enumerations and hard coded values (e.g. Assets.DigitalSoundList) could be moved to be configurable into the game.cfg to allow for more flexibility and game modding.
 * There is no heads up display.
+* There are no weapons.
+* There are no stats (health, ammo, keys, etc..) for the player.
 * No AI characters are implemented yet.
 * World geometry generation could be much better to reduce triangle count.

@@ -28,6 +28,8 @@ namespace Wolf
 				_areaShape.Shape = box;
 
 				_area = new Area();
+				_area.CollisionLayer = (int)(Level.CollisionLayers.Pickups);
+				_area.CollisionMask = (int)(Level.CollisionLayers.Characters);
 				_area.AddChild(_areaShape);
 
 				AddChild(_area);

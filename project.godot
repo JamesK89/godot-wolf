@@ -74,11 +74,13 @@ strafe={
 
 [layer_names]
 
-3d_physics/layer_1="Walls"
-3d_physics/layer_2="Doors"
-3d_physics/layer_3="Static"
-3d_physics/layer_4="Characters"
-3d_physics/layer_5="Projectiles"
+3d_physics/layer_1="Floor"
+3d_physics/layer_2="Walls"
+3d_physics/layer_3="Doors"
+3d_physics/layer_4="Static"
+3d_physics/layer_5="Characters"
+3d_physics/layer_6="Pickups"
+3d_physics/layer_7="Projectiles"
 
 [rendering]
 
