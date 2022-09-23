@@ -2,9 +2,7 @@ using Godot;
 using System;
 using System.Collections.Generic;
 
-using Direction = Wolf.Level.Direction;
-
-namespace Wolf
+namespace Wolf.Scripts
 {
     public class DoorSecret : Spatial
     {
@@ -44,7 +42,9 @@ namespace Wolf
                 Location = new Point2(x, y);
                 Level = level;
 
-                Type = level.Map.Planes[(int)Level.Planes.Walls][y, x];
+                Type = level.Cells[y, x].Wall;
+
+                level.Cells[y, x].Nodes.Add(this);
 
                 // This will be the physical body for the door itself.
 
@@ -56,8 +56,8 @@ namespace Wolf
 
                 _wallBody = new RigidBody();
                 _wallBody.Mode = RigidBody.ModeEnum.Static;
-                _wallBody.CollisionLayer = (uint)Level.CollisionLayers.Walls;
-                _wallBody.CollisionMask = (uint)(Level.CollisionLayers.Characters | Level.CollisionLayers.Projectiles);
+                _wallBody.CollisionLayer = (uint)CollisionLayers.Walls;
+                _wallBody.CollisionMask = (uint)(CollisionLayers.Characters | CollisionLayers.Projectiles);
                 _wallBody.AddChild(_wallShape);
 
                 AddChild(_wallBody);
@@ -203,7 +203,7 @@ namespace Wolf
                                 movePos.y > -1 &&
                                 movePos.x < Level.Map.Width &&
                                 movePos.y < Level.Map.Height &&
-                                !Level.IsWall(movePos.x, movePos.y);
+                                !Level.Cells[movePos.y, movePos.x].IsWall;
 
                             if (!moveValid)
                             {
@@ -223,7 +223,7 @@ namespace Wolf
 
                             _tween.PlaybackProcessMode = Tween.TweenProcessMode.Physics;
                             _tween.InterpolateProperty(_wallBody, "translation",
-                                Vector3.Zero, Level.DirectionVectors[(int)dir.d] * Level.CellSize * (float)moveDist,
+                                Vector3.Zero, Vectors.DirectionVectors[(int)dir.d] * Level.CellSize * (float)moveDist,
                                 _moveDuration, Tween.TransitionType.Linear, Tween.EaseType.InOut);
                             _tween.ResetAll();
                             _tween.Start();
@@ -272,12 +272,12 @@ namespace Wolf
                 {
                     st.Begin(Godot.Mesh.PrimitiveType.Triangles);
                     st.SetMaterial(Assets.GetTexture((id - 1) << 1));
-                    Level.CreateCube(st, Level.CellSize, Vector3.Zero, Level.Sides.North_South);
+                    Level.CreateCube(st, Level.CellSize, Vector3.Zero, Sides.North_South);
                     st.Commit(result);
 
                     st.Begin(Godot.Mesh.PrimitiveType.Triangles);
                     st.SetMaterial(Assets.GetTexture(((id - 1) << 1) + 1));
-                    Level.CreateCube(st, Level.CellSize, Vector3.Zero, Level.Sides.East_West);
+                    Level.CreateCube(st, Level.CellSize, Vector3.Zero, Sides.East_West);
                     st.Commit(result);
                 }
 

@@ -1,7 +1,7 @@
 using Godot;
 using System;
 
-namespace Wolf
+namespace Wolf.Scripts
 {
     public class CharacterPlayer : CharacterBase
     {
@@ -70,9 +70,9 @@ namespace Wolf
                 _useRay.ExcludeParent = true;
                 _useRay.CastTo = Vector3.Forward * (Level.CellSize * 0.5f);
                 _useRay.CollisionMask = (uint)(
-                    Level.CollisionLayers.Characters |
-                    Level.CollisionLayers.Static |
-                    Level.CollisionLayers.Walls);
+                    CollisionLayers.Characters |
+                    CollisionLayers.Static |
+                    CollisionLayers.Walls);
                 _useRay.AddException(this);
 
                 _camera.AddChild(_useRay);
@@ -244,6 +244,6 @@ namespace Wolf
             DesiredVelocity *= delta;
 
 			base._PhysicsProcess(delta);
-		}
+        }
 	}
 }

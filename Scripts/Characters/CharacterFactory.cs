@@ -2,9 +2,9 @@
 using System;
 using System.Collections.Generic;
 
-using CharacterType = Wolf.CharacterBase.CharacterType;
+using CharacterType = Wolf.Scripts.CharacterBase.CharacterType;
 
-namespace Wolf
+namespace Wolf.Scripts
 {
 	public static class CharacterFactory
 	{
@@ -20,7 +20,7 @@ namespace Wolf
         {
             CharacterBase ret = null;
 
-            CharacterType type = (CharacterType)level.Map.Planes[(int)Level.Planes.Objects][y, x];
+            CharacterType type = (CharacterType)level.Cells[y, x].Object;
 
             if (_charTypeMap.ContainsKey(type))
             {

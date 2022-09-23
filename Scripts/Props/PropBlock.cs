@@ -1,7 +1,7 @@
 ﻿using Godot;
 using System;
 
-namespace Wolf
+namespace Wolf.Scripts
 {
 	public class PropBlock : PropBase
 	{
@@ -21,12 +21,14 @@ namespace Wolf
 				shape.Shape = box;
 
 				Body = new StaticBody();
-				Body.CollisionLayer = (uint)Level.CollisionLayers.Static;
-				Body.CollisionMask = (uint)Level.CollisionLayers.Characters;
+				Body.CollisionLayer = (uint)CollisionLayers.Static;
+				Body.CollisionMask = (uint)CollisionLayers.Characters;
 				Body.AddChild(shape);
 
 				AddChild(Body);
-			}
+
+                Walkable = false;
+            }
 		}
 
 		public StaticBody Body

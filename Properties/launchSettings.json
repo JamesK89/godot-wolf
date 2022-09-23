@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "Wolf": {
+      "commandName": "Executable",
+      "executablePath": "%GODOT_BIN%",
+      "commandLineArgs": "--path . --verbose",
+      "workingDirectory": ".",
+      "nativeDebugging": true
+    }
+  }
+}

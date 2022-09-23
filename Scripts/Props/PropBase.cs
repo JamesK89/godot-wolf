@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Wolf
+namespace Wolf.Scripts
 {
 	public abstract class PropBase : Sprite3D
 	{
@@ -57,7 +57,8 @@ namespace Wolf
             Pots = 67,
             Stove = 68,
             Spears = 69,
-            Vines = 70
+            Vines = 70,
+            DeadGuard = 124
         }
 
         protected static Dictionary<PropType, int> PropSpriteIndices = new Dictionary<PropType, int>()
@@ -109,7 +110,8 @@ namespace Wolf
             {PropType.Pots, 46},
             {PropType.Stove, 47},
             {PropType.Spears, 48},
-            {PropType.Vines, 49}
+            {PropType.Vines, 49},
+            {PropType.DeadGuard, 95}
         };
 
         private PropBase()
@@ -122,7 +124,7 @@ namespace Wolf
             if (level != null)
             {
                 Level = level;
-                Type = (PropType)Level.Map.Planes[(int)Level.Planes.Objects][y, x];
+                Type = (PropType)Level.Cells[y, x].Object;
                 Location = new Point2(x, y);
 
                 Billboard = SpatialMaterial.BillboardMode.FixedY;
@@ -130,12 +132,15 @@ namespace Wolf
                 PixelSize = Level.CellSize / (float)Assets.VSWAP.SpriteSize.Height;
                 
                 Level.AddChild(this);
+                Level.Cells[y, x].Nodes.Add(this);
 
                 Transform tform = this.Transform;
 
                 tform.origin = level.MapToWorld(x, y);
 
                 this.Transform = tform;
+
+                Walkable = true;
             }
 		}
 
@@ -152,6 +157,12 @@ namespace Wolf
         }
 
         public Point2 Location
+        {
+            get;
+            protected set;
+        }
+
+        public bool Walkable
         {
             get;
             protected set;

@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Wolf
+namespace Wolf.Scripts
 {
     public class DoorSliding : Spatial
     {
@@ -83,9 +83,10 @@ namespace Wolf
                 Location = new Point2(x, y);
                 Level = level;
 
-                Type = (DoorType)level.Map.Planes[(int)Level.Planes.Walls][y, x];
+                Type = (DoorType)level.Cells[y, x].Wall;
 
-                level.Cells[y, x] = Level.Cell.Default();
+                level.Cells[y, x].Wall = Level.Cell.NoWall;
+                level.Cells[y, x].Nodes.Add(this);
 
                 // Adjust neighboring walls to show the door excavation.
 
@@ -130,8 +131,8 @@ namespace Wolf
                 _cellShape.Name = "CollisionShape";
 
                 _cellBody = new StaticBody();
-                _cellBody.CollisionLayer = (uint)Level.CollisionLayers.Static;
-                _cellBody.CollisionMask = (uint)(Level.CollisionLayers.Characters);
+                _cellBody.CollisionLayer = (uint)CollisionLayers.Static;
+                _cellBody.CollisionMask = (uint)(CollisionLayers.Characters);
                 _cellBody.AddChild(_cellShape);
 
                 AddChild(_cellBody);
@@ -168,8 +169,8 @@ namespace Wolf
                 _doorShape.Name = "CollisionShape";
 
                 _doorBody = new RigidBody();
-                _doorBody.CollisionLayer = (uint)Level.CollisionLayers.Doors;
-                _doorBody.CollisionMask = (uint)Level.CollisionLayers.Projectiles;
+                _doorBody.CollisionLayer = (uint)CollisionLayers.Doors;
+                _doorBody.CollisionMask = (uint)CollisionLayers.Projectiles;
                 _doorBody.AddChild(_doorShape);
                 _doorBody.Mode = RigidBody.ModeEnum.Static;
 
@@ -374,6 +375,22 @@ namespace Wolf
 		{
             if (State == DoorState.Opened)
             {
+                var space = PhysicsServer.SpaceGetDirectState(_cellBody.GetWorld().Space);
+
+                using (var query = new PhysicsShapeQueryParameters())
+                {
+                    query.SetShape(_cellShape.Shape);
+                    query.CollisionMask = (int)CollisionLayers.Characters;
+                    query.CollideWithBodies = true;
+                    query.CollideWithAreas = false;
+                    query.Transform = _cellShape.GlobalTransform;
+
+                    using (var results = space.IntersectShape(query))
+                    {
+                        _canClose = (results == null || results.Count < 1);
+                    }
+                }
+
                 _openTimer -= delta;
 
                 if (_openTimer < 0.0f && _canClose)
@@ -387,24 +404,6 @@ namespace Wolf
 
 		public override void _PhysicsProcess(float delta)
         {
-            if (State == DoorState.Opened)
-            {
-                var space =  _cellBody.GetWorld().DirectSpaceState;
-
-                using (var query = new PhysicsShapeQueryParameters())
-                {
-                    query.SetShape(_cellShape.Shape);
-                    query.CollisionMask = (int)Level.CollisionLayers.Characters;
-                    query.CollideWithBodies = true;
-                    query.CollideWithAreas = false;
-                    query.Transform = _cellShape.GlobalTransform;
-
-                    using (var results = space.IntersectShape(query))
-                    {
-                        _canClose = (results == null || results.Count < 1);
-                    }
-                }
-            }
 
             base._PhysicsProcess(delta);
 		}
@@ -421,65 +420,65 @@ namespace Wolf
                     Vector3[] cellVerts = Level.GetVerticesForCell();
 
                     Vector3[] verts = new Vector3[] {
-                        Lerp(cellVerts[(int)Level.CellVertexIndex.Top_SW], cellVerts[(int)Level.CellVertexIndex.Top_NW], 0.5f),
-                        Lerp(cellVerts[(int)Level.CellVertexIndex.Top_SE], cellVerts[(int)Level.CellVertexIndex.Top_NE], 0.5f),
-                        Lerp(cellVerts[(int)Level.CellVertexIndex.Bot_SW], cellVerts[(int)Level.CellVertexIndex.Bot_NW], 0.5f),
-                        Lerp(cellVerts[(int)Level.CellVertexIndex.Bot_SE], cellVerts[(int)Level.CellVertexIndex.Bot_NE], 0.5f)
+                        Lerp(cellVerts[(int)CellVertexIndex.Top_SW], cellVerts[(int)CellVertexIndex.Top_NW], 0.5f),
+                        Lerp(cellVerts[(int)CellVertexIndex.Top_SE], cellVerts[(int)CellVertexIndex.Top_NE], 0.5f),
+                        Lerp(cellVerts[(int)CellVertexIndex.Bot_SW], cellVerts[(int)CellVertexIndex.Bot_NW], 0.5f),
+                        Lerp(cellVerts[(int)CellVertexIndex.Bot_SE], cellVerts[(int)CellVertexIndex.Bot_NE], 0.5f)
                     };
 
                     st.Begin(Godot.Mesh.PrimitiveType.Triangles);
 
                     st.AddUv(new Vector2(0f, 1f));
                     st.AddColor(white);
-                    st.AddNormal(Level.South);
+                    st.AddNormal(Vectors.South);
                     st.AddVertex(verts[3]);
                     st.AddUv(new Vector2(0f, 0f));
                     st.AddColor(white);
-                    st.AddNormal(Level.South);
+                    st.AddNormal(Vectors.South);
                     st.AddVertex(verts[1]);
                     st.AddUv(new Vector2(1f, 0f));
                     st.AddColor(white);
-                    st.AddNormal(Level.South);
+                    st.AddNormal(Vectors.South);
                     st.AddVertex(verts[0]);
 
                     st.AddUv(new Vector2(1f, 1f));
                     st.AddColor(white);
-                    st.AddNormal(Level.South);
+                    st.AddNormal(Vectors.South);
                     st.AddVertex(verts[2]);
                     st.AddUv(new Vector2(0f, 1f));
                     st.AddColor(white);
-                    st.AddNormal(Level.South);
+                    st.AddNormal(Vectors.South);
                     st.AddVertex(verts[3]);
                     st.AddUv(new Vector2(1f, 0f));
                     st.AddColor(white);
-                    st.AddNormal(Level.South);
+                    st.AddNormal(Vectors.South);
                     st.AddVertex(verts[0]);
 
 
                     st.AddUv(new Vector2(1f, 0f));
                     st.AddColor(white);
-                    st.AddNormal(Level.North);
+                    st.AddNormal(Vectors.North);
                     st.AddVertex(verts[0]);
                     st.AddUv(new Vector2(0f, 0f));
                     st.AddColor(white);
-                    st.AddNormal(Level.North);
+                    st.AddNormal(Vectors.North);
                     st.AddVertex(verts[1]);
                     st.AddUv(new Vector2(0f, 1f));
                     st.AddColor(white);
-                    st.AddNormal(Level.North);
+                    st.AddNormal(Vectors.North);
                     st.AddVertex(verts[3]);
 
                     st.AddUv(new Vector2(1f, 0f));
                     st.AddColor(white);
-                    st.AddNormal(Level.North);
+                    st.AddNormal(Vectors.North);
                     st.AddVertex(verts[0]);
                     st.AddUv(new Vector2(0f, 1f));
                     st.AddColor(white);
-                    st.AddNormal(Level.North);
+                    st.AddNormal(Vectors.North);
                     st.AddVertex(verts[3]);
                     st.AddUv(new Vector2(1f, 1f));
                     st.AddColor(white);
-                    st.AddNormal(Level.North);
+                    st.AddNormal(Vectors.North);
                     st.AddVertex(verts[2]);
 
                     _doorMesh = st.Commit();

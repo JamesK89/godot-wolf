@@ -4,3 +4,6 @@
 [submodule "wolfread"]
 	path = wolfread
 	url = https://github.com/JamesK89/wolfread
+[submodule "Nuked-OPL3-DotNet"]
+	path = Nuked-OPL3-DotNet
+	url = https://github.com/bobapplemac/Nuked-OPL3-DotNet

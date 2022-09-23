@@ -1,7 +1,7 @@
 ﻿using Godot;
 using System;
 
-namespace Wolf
+namespace Wolf.Scripts
 {
 	public class PropPickup : PropBase
 	{
@@ -28,8 +28,8 @@ namespace Wolf
 				_areaShape.Shape = box;
 
 				_area = new Area();
-				_area.CollisionLayer = (int)(Level.CollisionLayers.Pickups);
-				_area.CollisionMask = (int)(Level.CollisionLayers.Characters);
+				_area.CollisionLayer = (int)(CollisionLayers.Pickups);
+				_area.CollisionMask = (int)(CollisionLayers.Characters);
 				_area.AddChild(_areaShape);
 
 				AddChild(_area);
@@ -49,7 +49,7 @@ namespace Wolf
 					if (result != null && 
 						Convert.ToBoolean(result))
 					{
-						_areaShape.Disabled = true;
+						_areaShape.SetDeferred("disabled", true);
 						Visible = false;
 
 						EmitSignal(nameof(PickedUp), new object[] { node });

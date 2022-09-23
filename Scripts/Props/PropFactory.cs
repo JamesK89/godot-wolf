@@ -3,9 +3,9 @@ using System;
 using System.Reflection;
 using System.Collections.Generic;
 
-using PropType = Wolf.PropBase.PropType;
+using PropType = Wolf.Scripts.PropBase.PropType;
 
-namespace Wolf
+namespace Wolf.Scripts
 {
 	public static class PropFactory
 	{
@@ -26,6 +26,7 @@ namespace Wolf
             {PropType.Junk3, typeof(PropStatic)},
             {PropType.Gibs, typeof(PropStatic)},
             {PropType.Blood, typeof(PropStatic)},
+            {PropType.DeadGuard, typeof(PropStatic)},
 
             /* Pickup Props */
             {PropType.DogFood, typeof(PropPickup)},
@@ -70,7 +71,7 @@ namespace Wolf
         {
             PropBase ret = null;
 
-            PropType type = (PropType)level.Map.Planes[(int)Level.Planes.Objects].Data[y, x];
+            PropType type = (PropType)level.Cells[y, x].Object;
 
             if (_propTypeMap.ContainsKey(type))
             {

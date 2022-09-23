@@ -7,7 +7,7 @@ using System.Collections.Generic;
 
 using WolfPalette = wolfread.Palette;
 
-namespace Wolf
+namespace Wolf.Scripts
 {
 	public static class Assets
 	{

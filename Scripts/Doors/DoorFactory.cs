@@ -1,9 +1,9 @@
 ﻿using Godot;
 using System;
 
-using DoorType = Wolf.DoorSliding.DoorType;
+using DoorType = Wolf.Scripts.DoorSliding.DoorType;
 
-namespace Wolf
+namespace Wolf.Scripts
 {
 	public static class DoorFactory
 	{
@@ -11,9 +11,9 @@ namespace Wolf
         {
             DoorSliding ret = null;
 
-            int wallId = (int)level.Map.Planes[(int)Level.Planes.Walls][y, x];
+            Level.Cell cell = level.Cells[y, x];
 
-            if (Enum.IsDefined(typeof(DoorType), wallId))
+            if (Enum.IsDefined(typeof(DoorType), cell.Wall))
             {
                 ret = new DoorSliding(x, y, level);
             }
@@ -25,11 +25,10 @@ namespace Wolf
         {
             DoorSecret ret = null;
 
-            ushort objId = level.Map.Planes[(int)Level.Planes.Objects][y, x];
-            ushort wallId = level.Map.Planes[(int)Level.Planes.Walls][y, x];
+            Level.Cell cell = level.Cells[y, x];
 
-            if (DoorSecret.DoorSecretId == (int)objId &&
-                wallId >= Level.MapWallBegin && wallId <= Level.MapWallEnd)
+            if (DoorSecret.DoorSecretId == cell.Object &&
+                cell.Wall >= Level.MapWallBegin && cell.Wall <= Level.MapWallEnd)
             {
                 ret = new DoorSecret(x, y, level);
             }

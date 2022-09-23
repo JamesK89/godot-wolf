@@ -1,7 +1,7 @@
 ﻿using Godot;
 using System;
 
-namespace Wolf
+namespace Wolf.Scripts
 {
     public abstract class CharacterBase : KinematicBody
     {
@@ -26,7 +26,9 @@ namespace Wolf
 
                 Location = new Point2(x, y);
 
-                Type = (CharacterType)level.Map.Planes[(int)Level.Planes.Objects][y, x];
+                Type = (CharacterType)level.Cells[y, x].Object;
+
+                level.Cells[y, x].Nodes.Add(this);
 
                 SetAxisLock(PhysicsServer.BodyAxis.AngularX, true);
                 SetAxisLock(PhysicsServer.BodyAxis.AngularY, true);
@@ -44,15 +46,15 @@ namespace Wolf
 
                 AddChild(colShape);
 
-                CollisionLayer = (uint)Level.CollisionLayers.Characters;
+                CollisionLayer = (uint)CollisionLayers.Characters;
                 CollisionMask = (uint)(
-                    Level.CollisionLayers.Characters |
-                    Level.CollisionLayers.Static |
-                    Level.CollisionLayers.Doors |
-                    Level.CollisionLayers.Walls |
-                    Level.CollisionLayers.Floor |
-                    Level.CollisionLayers.Pickups |
-                    Level.CollisionLayers.Projectiles);
+                    CollisionLayers.Characters |
+                    CollisionLayers.Static |
+                    CollisionLayers.Doors |
+                    CollisionLayers.Walls |
+                    CollisionLayers.Floor |
+                    CollisionLayers.Pickups |
+                    CollisionLayers.Projectiles);
 
                 Level.AddChild(this);
 
@@ -97,12 +99,26 @@ namespace Wolf
         }
         
 		public override void _PhysicsProcess(float delta)
-		{
+        {
+            base._PhysicsProcess(delta);
+
             Vector3 vel = (Velocity + DesiredVelocity) * 0.5f;
 
             Velocity = MoveAndSlide(vel, Vector3.Up);
 
-			base._PhysicsProcess(delta);
+            Point2 newLoc = Level.WorldToMap(this.GlobalTransform.origin);
+
+            if (!newLoc.Equals(Location))
+            {
+                if (Location.x >= 0 && Location.x < Level.Width &&
+                    Location.y >= 0 && Location.y < Level.Height)
+                {
+                    Level.Cells[Location.y, Location.x].Nodes.Remove(this);
+                    Level.Cells[newLoc.y, newLoc.x].Nodes.Add(this);
+                }
+
+                Location = newLoc;
+            }
 		}
 	}
 }

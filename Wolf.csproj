@@ -1,15 +1,32 @@
-<Project Sdk="Godot.NET.Sdk/3.2.3">
+<Project Sdk="Godot.NET.Sdk/3.3.0">
   <PropertyGroup>
     <TargetFramework>net472</TargetFramework>
+    <RunAnalyzersDuringLiveAnalysis>False</RunAnalyzersDuringLiveAnalysis>
+    <RunAnalyzersDuringBuild>False</RunAnalyzersDuringBuild>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ExportRelease|AnyCPU'">
+    <Optimize>True</Optimize>
+    <DebugType>embedded</DebugType>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <Optimize>False</Optimize>
+    <DebugType>embedded</DebugType>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ExportDebug|AnyCPU'">
+    <Optimize>False</Optimize>
+    <DebugType>embedded</DebugType>
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="Fig\**" />
+    <Compile Remove="Nuked-OPL3-DotNet\**" />
     <Compile Remove="wolfread\**" />
     <EmbeddedResource Remove="Fig\**" />
+    <EmbeddedResource Remove="Nuked-OPL3-DotNet\**" />
     <EmbeddedResource Remove="wolfread\**" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="Fig\Fig.csproj" />
+    <ProjectReference Include="Nuked-OPL3-DotNet\Nuked-OPL3\Nuked-OPL3\Nuked-OPL3.csproj" />
     <ProjectReference Include="wolfread\wolfread.csproj" />
   </ItemGroup>
 </Project>

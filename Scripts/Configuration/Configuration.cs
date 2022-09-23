@@ -4,7 +4,7 @@ using Fig;
 using System.Linq;
 using System.Collections.Generic;
 
-namespace Wolf
+namespace Wolf.Scripts
 {
 	public static class Configuration
 	{
