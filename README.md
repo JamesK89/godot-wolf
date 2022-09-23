@@ -10,12 +10,11 @@ Contributions are welcome!
 
 Some things that are needed in no particular order:
 * Digitized sound effects are available but some of them have a "beep" on the end. (Please look at the VSWAP.cs wolfread library and see if you can figure it out. I'm probably determining the chunk length wrong.)
-* Adlib sound effects are absent which are basically short MIDI sequences. It'll need to be figured out how to synthesize those into digital samples for playback in Godot.
-* There is no music. Again, we'll need to figure out how to synthesize those into digital samples for playback in Godot.
-* The Level class is used as a place holder for a lot of enumerations, so some refactoring needs to be done.
+* Adlib sound effects are absent which are basically short MIDI sequences. I plan to use the added Nuked-OPL3-dotnet submodule to digitize the sound effects but haven't really worked on it yet.
+* There is no music. I plan to use the added Nuked-OPL3-dotnet submodule to digitize the music but haven't really worked on it yet.
 * Some enumerations and hard coded values (e.g. Assets.DigitalSoundList) could be moved to be configurable into the game.cfg to allow for more flexibility and game modding.
 * There is no heads up display.
 * There are no weapons.
 * There are no stats (health, ammo, keys, etc..) for the player.
-* No AI characters are implemented yet.
+* AI is very basic at the moment; only the basic guard is implemented and they just chase you around. It is basically a port of the AI from the original C code.
 * World geometry generation could be much better to reduce triangle count.
